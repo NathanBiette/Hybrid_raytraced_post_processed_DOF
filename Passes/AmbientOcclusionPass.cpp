@@ -37,6 +37,8 @@ bool AmbientOcclusionPass::initialize(RenderContext::SharedPtr pRenderContext, R
 
 	// Set the default scene to load
 	mpResManager->setDefaultSceneName("Data/pink_room/pink_room.fscene");
+	//mpResManager->setDefaultSceneName("Data/SunTemple/SunTemple.fscene");
+
 
 	// Create wrapper around a ray tracing pass.  Specify our ray generation shader and ray-specific shaders 
 	mpRays = RayLaunch::create(kFileRayTrace, kEntryPointRayGen);
