@@ -20,14 +20,9 @@
 __import Shading;           // Imports ShaderCommon and DefaultVS, plus material evaluation
 __import DefaultVS;         // VertexOut declaration
 
-							// Define our output buffer
 struct GBuffer
 {
-	float4 wsPos    : SV_Target0;  // Our world-space position goes in color buffer 0
-	float4 wsNorm   : SV_Target1;  // Our world-space normal goes in color buffer 1
-	float4 matDif   : SV_Target2;  // Our material's diffuse channel in color buffer 2
-	float4 matSpec  : SV_Target3;  // Our material specular data in color buffer 3
-	float4 matExtra : SV_Target4;  // Our extra material parameters in color buffer 4
+	float4 color    : SV_Target0;  // Our color goes in color buffer 0
 };
 
 // Our main entry point for the g-buffer fragment shader.
@@ -39,11 +34,15 @@ GBuffer main(VertexOut vsOut, uint primID : SV_PrimitiveID, float4 pos : SV_Posi
 
 	// Dump out our G buffer channels
 	GBuffer gBufOut;
-	gBufOut.wsPos = float4(hitPt.posW, 1.f);
-	gBufOut.wsNorm = float4(hitPt.N, length(hitPt.posW - gCamera.posW));
-	gBufOut.matDif = float4(hitPt.diffuse, hitPt.opacity);
-	gBufOut.matSpec = float4(hitPt.specular, hitPt.linearRoughness);
-	gBufOut.matExtra = float4(hitPt.IoR, hitPt.doubleSidedMaterial ? 1.f : 0.f, 0.f, 0.f);
+	gBufOut.color = float4(0.0, 0.0, 0.0, hitPt.opacity);
+
+	// Get the shading resulting from all lights (sum diffuse and specular term of each lights contribution)
+	for (int lightIndex = 0; lightIndex < gLightsCount; lightIndex++)
+	{
+		ShadingResult sr = evalMaterial(hitPt, gLights[lightIndex], 1.0);	//for now just don't put any shadows !!!
+		gBufOut.color.rgb += sr.color.rgb;
+		//gBufOut.color.rgb = float3(1.0,0.5,0.5);
+	}
 
 	return gBufOut;
 }
