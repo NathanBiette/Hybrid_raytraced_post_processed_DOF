@@ -21,6 +21,7 @@
 #include "../CommonPasses/SimpleGBufferPass.h"
 #include "Passes/AmbientOcclusionPass.h"
 #include "../CommonPasses/CopyToOutputPass.h"
+#include "Passes/TilePass.h"
 
 int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR lpCmdLine, _In_ int nShowCmd)
 {
@@ -29,7 +30,8 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 
 	// Add passes into our pipeline
 	pipeline->setPass(0, SimpleGBufferPass::create());     // Create G-buffer (See Tutorial 3)
-	pipeline->setPass(1, CopyToOutputPass::create());     // Create G-buffer (See Tutorial 3)
+	pipeline->setPass(1, TilePass::create());
+	pipeline->setPass(2, CopyToOutputPass::create());
 	//pipeline->setPass(1, AmbientOcclusionPass::create());  // Create a pass to shoot ambient occlusion rays
  
 	// Define a set of config / window parameters for our program

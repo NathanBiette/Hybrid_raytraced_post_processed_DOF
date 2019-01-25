@@ -24,23 +24,19 @@ class TilePass : public RenderPass, inherit_shared_from_this<RenderPass, TilePas
 public:
 	using SharedPtr = std::shared_ptr<TilePass>;
 
-	static SharedPtr create(const std::string &bufferToAccumulate);
+	static SharedPtr create();
 	virtual ~TilePass() = default;
 
 protected:
-	TilePass(const std::string &bufferToAccumulate);
+	TilePass();
 
 	// Implementation of SimpleRenderPass interface
 	bool initialize(RenderContext::SharedPtr pRenderContext, ResourceManager::SharedPtr pResManager) override;
 	void execute(RenderContext::SharedPtr pRenderContext) override;
 	void resize(uint32_t width, uint32_t height) override;
-	void stateRefreshed() override;
 
 	// The RenderPass class defines various methods we can override to specify this pass' properties. 
 	bool appliesPostprocess() override { return true; }
-
-	// Information about the rendering texture we're accumulating into
-	std::string                   mAccumChannel;
 
 	// State for our accumulation shader
 	FullscreenLaunch::SharedPtr   mpTilingShader;
