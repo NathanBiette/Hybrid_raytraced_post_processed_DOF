@@ -21,6 +21,7 @@
 namespace {
 	// Where is our shader located?
 	const char *kTilingShader = "Tutorial05\\tiling.ps.hlsl";
+	const char *kDilateShader = "Tutorial05\\dilate.ps.hlsl";
 };
 
 // Define our constructor methods
@@ -53,15 +54,24 @@ bool TilePass::initialize(RenderContext::SharedPtr pRenderContext, ResourceManag
 
 	//#######################################
 
-	//mpResManager->requestTextureResource("Tiles", ResourceFormat::R32Float,(Falcor::Resource::BindFlags)112U,500,500);
+	//Get size of full screen image
+	int32_t width = (int32_t)mpResManager->getWidth();
+	int32_t height = (int32_t)mpResManager->getHeight();
+	printf("width = %d /n", width);
+	printf("height = %d /n", height);
+	//mpResManager->requestTextureResource("Tiles", ResourceFormat::R32Float,(Falcor::Resource::BindFlags)112U,500,500); //specifying size seems to work well
+	mpResManager->requestTextureResource("Tiles", ResourceFormat::RG16Float,(Falcor::Resource::BindFlags)112U, width / 20 , height / 20); //specifying size seems to work well
+	mpResManager->requestTextureResource("Dilate", ResourceFormat::RG16Float,(Falcor::Resource::BindFlags)112U, width / 20 , height / 20); 
+	
 	//mpResManager->requestTextureResource("Tiles", ResourceFormat::R32Float);
-	mpResManager->requestTextureResource("Tiles");
+	//mpResManager->requestTextureResource("Tiles");
 	mpResManager->requestTextureResource("Z-Buffer2", ResourceFormat::D24UnormS8, ResourceManager::kDepthBufferFlags);
 	//mpResManager->requestTextureResource("Z-Buffer");
 
 	// Create our graphics state and an tiling shader
 	mpGfxState = GraphicsState::create();
 	mpTilingShader = FullscreenLaunch::create(kTilingShader);
+	mpDilateShader = FullscreenLaunch::create(kDilateShader);
 	return true;
 }
 
@@ -83,6 +93,8 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	// Get our output buffer; clear it to black.
 	//Texture::SharedPtr outputTexture = mpResManager->getClearedTexture("Tiles", vec4(0.0f, 0.0f, 0.0f, 0.0f));
 	Texture::SharedPtr inputTexture = mpResManager->getTexture("Z-Buffer");
+	// If our input texture is invalid, or we've been asked to skip accumulation, do nothing.
+	if (!inputTexture) return;
 
 	Fbo::SharedPtr outputFbo = mpResManager->createManagedFbo({"Tiles" }, "Z-Buffer2");
 	// Failed to create a valid FBO?  We're done.
@@ -90,14 +102,14 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	// Clear our color buffers to background color, depth to 1, stencil to 0
 	pRenderContext->clearFbo(outputFbo.get(), vec4(0.5f, 0.5f, 0.5f, 1.0f), 1.0f, 0);
 
-
-	// If our input texture is invalid, or we've been asked to skip accumulation, do nothing.
-	if (!inputTexture) return;
-
 	// Set shader parameters for our accumulation pass
 	auto shaderVars = mpTilingShader->getVars();
 	
 	shaderVars["gZBuffer"] = inputTexture;
+	shaderVars["cameraParametersCB"]["gFocalLength"] = mFocalLength;
+	shaderVars["cameraParametersCB"]["gDistanceToFocalPlane"] = mDistFocalPlane;
+	shaderVars["cameraParametersCB"]["gAperture"] = mAperture;
+
 	//shaderVars["gTileBuffer"] = outputTexture;
 
 	/*
@@ -111,5 +123,20 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	//---------------------------------------
 	// Execute the accumulation shader
 	mpTilingShader->execute(pRenderContext, mpGfxState);
+
+	//########################  Second pass -> dilate pass  ########################################
+	Fbo::SharedPtr outputFbo2 = mpResManager->createManagedFbo({ "Dilate" }, "Z-Buffer2");
+	if (!outputFbo) return;
+	pRenderContext->clearFbo(outputFbo2.get(), vec4(0.0f, 0.0f, 0.0f, 1.0f), 1.0f, 0);
+
+	Texture::SharedPtr tiles = mpResManager->getTexture("Tiles");
+	if (!tiles) return;
+
+	auto dilateShaderVars = mpDilateShader->getVars();
+	dilateShaderVars["gTiles"] = tiles;
+	dilateShaderVars["textureParametersCB"]["width"] = (int)mpResManager->getWidth();
+	dilateShaderVars["textureParametersCB"]["height"] = (int)mpResManager->getHeight();
+	mpGfxState->setFbo(outputFbo2);
+	mpDilateShader->execute(pRenderContext, mpGfxState);
 
 }

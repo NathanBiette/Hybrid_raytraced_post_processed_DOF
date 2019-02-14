@@ -30,6 +30,12 @@ public:
 protected:
 	TilePass();
 
+	//Thin lens parameters
+	float mFNumber = 2.0f;                  // f number (typeless) = F/A (A = aperture)
+	float mFocalLength = 0.05f;              // here we take 50mm of focal length 
+	float mDistFocalPlane = 1.0f;				// What is our distance to focal plane (meaning where we focus on, 1m here)
+	float mAperture = mFocalLength / mFNumber;
+
 	// Implementation of SimpleRenderPass interface
 	bool initialize(RenderContext::SharedPtr pRenderContext, ResourceManager::SharedPtr pResManager) override;
 	void execute(RenderContext::SharedPtr pRenderContext) override;
@@ -40,6 +46,7 @@ protected:
 
 	// State for our accumulation shader
 	FullscreenLaunch::SharedPtr   mpTilingShader;
+	FullscreenLaunch::SharedPtr   mpDilateShader;
 	GraphicsState::SharedPtr      mpGfxState;
 	Texture::SharedPtr            mpLastFrame;
 	Fbo::SharedPtr                mpInternalFbo;
