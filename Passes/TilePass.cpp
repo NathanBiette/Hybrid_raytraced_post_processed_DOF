@@ -22,6 +22,7 @@ namespace {
 	// Where is our shader located?
 	const char *kTilingShader = "Tutorial05\\tiling.ps.hlsl";
 	const char *kDilateShader = "Tutorial05\\dilate.ps.hlsl";
+	const char *kDownPresortShader = "Tutorial05\\downpresort.ps.hlsl";
 };
 
 // Define our constructor methods
@@ -62,6 +63,8 @@ bool TilePass::initialize(RenderContext::SharedPtr pRenderContext, ResourceManag
 	//mpResManager->requestTextureResource("Tiles", ResourceFormat::R32Float,(Falcor::Resource::BindFlags)112U,500,500); //specifying size seems to work well
 	mpResManager->requestTextureResource("Tiles", ResourceFormat::RG16Float,(Falcor::Resource::BindFlags)112U, width / 20 , height / 20); //specifying size seems to work well
 	mpResManager->requestTextureResource("Dilate", ResourceFormat::RG16Float,(Falcor::Resource::BindFlags)112U, width / 20 , height / 20); 
+	mpResManager->requestTextureResource("Half_res_color", ResourceFormat::RGB16Float,(Falcor::Resource::BindFlags)112U, width / 2 , height / 2);
+	mpResManager->requestTextureResource("Presort_buffer", ResourceFormat::RGB16Float,(Falcor::Resource::BindFlags)112U, width / 2 , height / 2);
 	
 	//mpResManager->requestTextureResource("Tiles", ResourceFormat::R32Float);
 	//mpResManager->requestTextureResource("Tiles");
@@ -72,9 +75,11 @@ bool TilePass::initialize(RenderContext::SharedPtr pRenderContext, ResourceManag
 	mpGfxState = GraphicsState::create();
 	mpTilingShader = FullscreenLaunch::create(kTilingShader);
 	mpDilateShader = FullscreenLaunch::create(kDilateShader);
+	mpDownPresortShader = FullscreenLaunch::create(kDownPresortShader);
 	return true;
 }
 
+/*
 void TilePass::resize(uint32_t width, uint32_t height)
 {
 	// Create / resize a texture to store the previous frame.
@@ -87,14 +92,15 @@ void TilePass::resize(uint32_t width, uint32_t height)
 	mpGfxState->setFbo(mpInternalFbo);
 
 }
+*/
 
 void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 {
 	// Get our output buffer; clear it to black.
 	//Texture::SharedPtr outputTexture = mpResManager->getClearedTexture("Tiles", vec4(0.0f, 0.0f, 0.0f, 0.0f));
-	Texture::SharedPtr inputTexture = mpResManager->getTexture("Z-Buffer");
+	Texture::SharedPtr fullResZBuffer = mpResManager->getTexture("Z-Buffer");
 	// If our input texture is invalid, or we've been asked to skip accumulation, do nothing.
-	if (!inputTexture) return;
+	if (!fullResZBuffer) return;
 
 	Fbo::SharedPtr outputFbo = mpResManager->createManagedFbo({"Tiles" }, "Z-Buffer2");
 	// Failed to create a valid FBO?  We're done.
@@ -105,7 +111,7 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	// Set shader parameters for our accumulation pass
 	auto shaderVars = mpTilingShader->getVars();
 	
-	shaderVars["gZBuffer"] = inputTexture;
+	shaderVars["gZBuffer"] = fullResZBuffer;
 	shaderVars["cameraParametersCB"]["gFocalLength"] = mFocalLength;
 	shaderVars["cameraParametersCB"]["gDistanceToFocalPlane"] = mDistFocalPlane;
 	shaderVars["cameraParametersCB"]["gAperture"] = mAperture;
@@ -139,4 +145,22 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	mpGfxState->setFbo(outputFbo2);
 	mpDilateShader->execute(pRenderContext, mpGfxState);
 
+	//########################  Third pass -> downPresort pass  ########################################
+	Fbo::SharedPtr outputFbo3 = mpResManager->createManagedFbo({ "Half_res_color", "Presort_buffer" }, "Z-Buffer2");
+	if (!outputFbo) return;
+	pRenderContext->clearFbo(outputFbo3.get(), vec4(0.0f, 0.0f, 0.0f, 0.0f), 1.0f, 0);
+	
+	Texture::SharedPtr dilate = mpResManager->getTexture("Dilate");
+	Texture::SharedPtr frameColor = mpResManager->getTexture("FrameColor");
+	
+	auto downPresortShaderVars = mpDownPresortShader->getVars();
+	downPresortShaderVars["gDilate"] = dilate;
+	downPresortShaderVars["gZBuffer"] = fullResZBuffer;
+	downPresortShaderVars["gFrameColor"] = frameColor;
+	downPresortShaderVars["cameraParametersCB"]["gFocalLength"] = mFocalLength;
+	downPresortShaderVars["cameraParametersCB"]["gDistanceToFocalPlane"] = mDistFocalPlane;
+	downPresortShaderVars["cameraParametersCB"]["gAperture"] = mAperture;
+
+	mpGfxState->setFbo(outputFbo3);
+	mpDownPresortShader->execute(pRenderContext, mpGfxState);
 }

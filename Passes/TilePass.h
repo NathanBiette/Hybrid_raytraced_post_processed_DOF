@@ -44,9 +44,11 @@ protected:
 	// The RenderPass class defines various methods we can override to specify this pass' properties. 
 	bool appliesPostprocess() override { return true; }
 
-	// State for our accumulation shader
+	// Shaders
 	FullscreenLaunch::SharedPtr   mpTilingShader;
 	FullscreenLaunch::SharedPtr   mpDilateShader;
+	FullscreenLaunch::SharedPtr   mpDownPresortShader;
+	// State for our accumulation shader
 	GraphicsState::SharedPtr      mpGfxState;
 	Texture::SharedPtr            mpLastFrame;
 	Fbo::SharedPtr                mpInternalFbo;
