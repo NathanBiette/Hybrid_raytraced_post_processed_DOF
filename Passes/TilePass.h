@@ -39,7 +39,7 @@ protected:
 	// Implementation of SimpleRenderPass interface
 	bool initialize(RenderContext::SharedPtr pRenderContext, ResourceManager::SharedPtr pResManager) override;
 	void execute(RenderContext::SharedPtr pRenderContext) override;
-	void resize(uint32_t width, uint32_t height) override;
+	//void resize(uint32_t width, uint32_t height) override;
 
 	// The RenderPass class defines various methods we can override to specify this pass' properties. 
 	bool appliesPostprocess() override { return true; }

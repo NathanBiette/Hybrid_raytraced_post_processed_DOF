@@ -160,6 +160,10 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	downPresortShaderVars["cameraParametersCB"]["gFocalLength"] = mFocalLength;
 	downPresortShaderVars["cameraParametersCB"]["gDistanceToFocalPlane"] = mDistFocalPlane;
 	downPresortShaderVars["cameraParametersCB"]["gAperture"] = mAperture;
+	downPresortShaderVars["cameraParametersCB"]["gDepthRange"] = 100.0f;			//const of depth range here 
+	downPresortShaderVars["cameraParametersCB"]["gSinglePixelRadius"] = 0.7071f;	//const of pixel radius
+	dilateShaderVars["textureParametersCB"]["gTextureWidth"] = (int)mpResManager->getWidth();
+	dilateShaderVars["textureParametersCB"]["gTextureHeight"] = (int)mpResManager->getHeight();
 
 	mpGfxState->setFbo(outputFbo3);
 	mpDownPresortShader->execute(pRenderContext, mpGfxState);
