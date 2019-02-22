@@ -4,13 +4,17 @@ Texture2D<float4>   gDilate;
 Texture2D<float4>   gZBuffer;
 Texture2D<float4>   gFrameColor;
 
+SamplerState gSampler;
+
+/*
 SamplerState linearSampler
 {
 	Filter = MIN_MAG_MIP_LINEAR;
 	//AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
 	//AddressU = Wrap;
 	//AddressV = Wrap;
-}
+};
+*/
 
 cbuffer cameraParametersCB
 {
@@ -19,15 +23,19 @@ cbuffer cameraParametersCB
 	float gAperture;
 	float gDepthRange;
 	float gSinglePixelRadius;
-}
-
-cbuffer textureParametersCB
-{
 	int gTextureWidth;
 	int gTextureHeight;
 }
 
-struct DownPresortBuffer
+/*
+cbuffer textureParametersCB
+{
+	int gTextureWidth;
+	int gTextureHeight;
+}*/
+
+struct PS_OUTPUT
+
 {
 	float4 halfResColor    : SV_Target0;  // Our color goes in color buffer 0
 	float4 presortBuffer    : SV_Target1;  // Our color goes in buffer 1
@@ -40,7 +48,7 @@ float COC(float depth) {
 }
 
 float2 DepthCmp2(float pixelDepth, float closestDepthInTile, float depthRange) {
-	float d = depthRange * (pixelDepth - closestDepthInTile);
+	float d = (pixelDepth - closestDepthInTile) / depthRange;
 	float2 depthCmp;
 	depthCmp.x = smoothstep(0.0f, 1.0f, d);
 	depthCmp.y = 1.0f - depthCmp.x;
@@ -53,10 +61,10 @@ float SampleAlpha(float coc, float singlePixelRadius) {
 }
 //##################################################################################
 
-float4 main(float2 texC : TEXCOORD, float4 pos : SV_Position)
+PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 {
 	uint2 pixelPos = (uint2)pos.xy;
-	DownPresortBuffer DownPresortBufOut;
+	PS_OUTPUT DownPresortBufOut;
 
 	float Z = gZBuffer[uint2(pixelPos.x, pixelPos.y)].r;
 	for (int i = 0; i < 2; i++) {
@@ -69,17 +77,18 @@ float4 main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 
 	//####################### presort pass #######################################################
 	float coc = COC(Z);
-	float depthCmp2 = DepthCmp2(Z, gDilate[uint2(pixelPos.x / 10, pixelPos.y / 10)], gDepthRange);
+	float2 depthCmp2 = DepthCmp2(Z, gDilate[uint2(pixelPos.x / 10, pixelPos.y / 10)].g, gDepthRange);
 	float sampleAlpha = SampleAlpha(coc / 2.0f, gSinglePixelRadius);
 	
 	DownPresortBufOut.presortBuffer = float4(coc, sampleAlpha * depthCmp2.x, sampleAlpha * depthCmp2.y, 0.0f);
 	
 	//####################### downsample pass #######################################################
 
-	float4 halfResColor = gFrameColor.SampleLevel(linearSampler, texC, 0);
-	float* sampleZ = float[9];
+	float4 halfResColor = gFrameColor.SampleLevel(gSampler, texC, 0);
+	//float4 halfResColor = float4(1.0f, 0.5f, 0.5f, 1.0f);
+	//float* sampleZ = float[9];
 	float sumZ = Z; //the Z from the downsample part, of target output
-	float3* sampleColor = float3[9];
+	//float3* sampleColor = float3[9];
 
 	/*
 	for (int i = 0; i < 9; i++) {

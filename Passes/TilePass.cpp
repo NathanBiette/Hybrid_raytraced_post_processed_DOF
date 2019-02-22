@@ -63,8 +63,10 @@ bool TilePass::initialize(RenderContext::SharedPtr pRenderContext, ResourceManag
 	//mpResManager->requestTextureResource("Tiles", ResourceFormat::R32Float,(Falcor::Resource::BindFlags)112U,500,500); //specifying size seems to work well
 	mpResManager->requestTextureResource("Tiles", ResourceFormat::RG16Float,(Falcor::Resource::BindFlags)112U, width / 20 , height / 20); //specifying size seems to work well
 	mpResManager->requestTextureResource("Dilate", ResourceFormat::RG16Float,(Falcor::Resource::BindFlags)112U, width / 20 , height / 20); 
-	mpResManager->requestTextureResource("Half_res_color", ResourceFormat::RGB16Float,(Falcor::Resource::BindFlags)112U, width / 2 , height / 2);
-	mpResManager->requestTextureResource("Presort_buffer", ResourceFormat::RGB16Float,(Falcor::Resource::BindFlags)112U, width / 2 , height / 2);
+	//mpResManager->requestTextureResource("Half_res_color", ResourceFormat::RGB16Float,(Falcor::Resource::BindFlags)112U, width / 2 , height / 2);
+	
+	mpResManager->requestTextureResource("Half_res_color", ResourceFormat::RGBA16Float,(Falcor::Resource::BindFlags)112U, width / 2 , height / 2);
+	mpResManager->requestTextureResource("Presort_buffer", ResourceFormat::RGBA16Float,(Falcor::Resource::BindFlags)112U, width / 2 , height / 2);
 	
 	//mpResManager->requestTextureResource("Tiles", ResourceFormat::R32Float);
 	//mpResManager->requestTextureResource("Tiles");
@@ -146,6 +148,8 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	mpDilateShader->execute(pRenderContext, mpGfxState);
 
 	//########################  Third pass -> downPresort pass  ########################################
+	
+	
 	Fbo::SharedPtr outputFbo3 = mpResManager->createManagedFbo({ "Half_res_color", "Presort_buffer" }, "Z-Buffer2");
 	if (!outputFbo) return;
 	pRenderContext->clearFbo(outputFbo3.get(), vec4(0.0f, 0.0f, 0.0f, 0.0f), 1.0f, 0);
@@ -160,11 +164,35 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	downPresortShaderVars["cameraParametersCB"]["gFocalLength"] = mFocalLength;
 	downPresortShaderVars["cameraParametersCB"]["gDistanceToFocalPlane"] = mDistFocalPlane;
 	downPresortShaderVars["cameraParametersCB"]["gAperture"] = mAperture;
-	downPresortShaderVars["cameraParametersCB"]["gDepthRange"] = 100.0f;			//const of depth range here 
+	downPresortShaderVars["cameraParametersCB"]["gDepthRange"] = 10.0f;			//const of depth range here 
 	downPresortShaderVars["cameraParametersCB"]["gSinglePixelRadius"] = 0.7071f;	//const of pixel radius
-	dilateShaderVars["textureParametersCB"]["gTextureWidth"] = (int)mpResManager->getWidth();
-	dilateShaderVars["textureParametersCB"]["gTextureHeight"] = (int)mpResManager->getHeight();
+	
+	downPresortShaderVars["cameraParametersCB"]["gTextureWidth"] = (int)mpResManager->getWidth();
+	downPresortShaderVars["cameraParametersCB"]["gTextureHeight"] = (int)mpResManager->getHeight();
+	//dilateShaderVars["textureParametersCB"]["gTextureWidth"] = (int)mpResManager->getWidth();
+	//dilateShaderVars["textureParametersCB"]["gTextureHeight"] = (int)mpResManager->getHeight();
 
+	
+	//trying to understand how to setup a clean sampler through the API
+	
+	
+	Sampler::SharedPtr mpSampler;
+	Sampler::Desc samplerDesc;
+	ProgramReflection::SharedConstPtr pReflector;
+	ParameterBlockReflection::BindLocation samplerBindLocation;
+
+	samplerDesc.setFilterMode(Sampler::Filter::Linear, Sampler::Filter::Linear, Sampler::Filter::Point).setAddressingMode(Sampler::AddressMode::Border, Sampler::AddressMode::Border, Sampler::AddressMode::Border);
+	//samplerDesc.setFilterMode(Sampler::Filter::Linear, Sampler::Filter::Linear, Sampler::Filter::Point).setAddressingMode(Sampler::AddressMode::Border, Sampler::AddressMode::Border, Sampler::AddressMode::Border).setLodParams(0.0f, 0.0f, 0.0f);
+	mpSampler = Sampler::create(samplerDesc);
+	
+	pReflector = mpDownPresortShader->getProgramReflection();
+	samplerBindLocation = pReflector->getDefaultParameterBlock()->getResourceBinding("gSampler");
+	ParameterBlock* pDefaultBlock = downPresortShaderVars->getVars()->getDefaultBlock().get();
+	pDefaultBlock->setSampler(samplerBindLocation, 0, mpSampler);
+	
+	
+	//----------------- end sampler section -------------------
 	mpGfxState->setFbo(outputFbo3);
 	mpDownPresortShader->execute(pRenderContext, mpGfxState);
+	
 }
