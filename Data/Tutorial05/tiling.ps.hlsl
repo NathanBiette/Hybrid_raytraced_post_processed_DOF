@@ -5,6 +5,8 @@ cbuffer cameraParametersCB
 	float gFocalLength;
 	float gDistanceToFocalPlane;
 	float gAperture;
+	float gNear;
+	float gFar;
 }
 
 float4 main(float2 texC : TEXCOORD, float4 pos : SV_Position) : SV_TARGET0
@@ -31,6 +33,10 @@ float4 main(float2 texC : TEXCOORD, float4 pos : SV_Position) : SV_TARGET0
 	return outColor;
 }
 
-float COC(float depth) {
-	return abs(gAperture * gFocalLength * (gDistanceToFocalPlane - depth) / (depth * (gDistanceToFocalPlane - gFocalLength)));
+float depth(float Z) {
+	return gNear + Z * (gFar - gNear);
+}
+
+float COC(float z) {
+	return abs(gAperture * gFocalLength * (gDistanceToFocalPlane - depth(z)) / (depth(z) * (gDistanceToFocalPlane - gFocalLength)));
 }

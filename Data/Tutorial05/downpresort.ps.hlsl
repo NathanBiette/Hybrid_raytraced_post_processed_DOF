@@ -23,8 +23,10 @@ cbuffer cameraParametersCB
 	float gAperture;
 	float gDepthRange;
 	float gSinglePixelRadius;
-	int gTextureWidth;
-	int gTextureHeight;
+	float gTextureWidth;
+	float gTextureHeight;
+	float gNear;
+	float gFar;
 }
 
 /*
@@ -43,12 +45,16 @@ struct PS_OUTPUT
 
 
 //################################## Helper functions ##############################
-float COC(float depth) {
-	return abs(gAperture * gFocalLength * (gDistanceToFocalPlane - depth) / (depth * (gDistanceToFocalPlane - gFocalLength)));
+float depth(float Z) {
+	return gNear + Z * (gFar - gNear);
+}
+
+float COC(float z) {
+	return abs(gAperture * gFocalLength * (gDistanceToFocalPlane - depth(z)) / (depth(z) * (gDistanceToFocalPlane - gFocalLength)));
 }
 
 float2 DepthCmp2(float pixelDepth, float closestDepthInTile, float depthRange) {
-	float d = (pixelDepth - closestDepthInTile) / depthRange;
+	float d = (depth(pixelDepth) - depth(closestDepthInTile)) / depthRange;
 	float2 depthCmp;
 	depthCmp.x = smoothstep(0.0f, 1.0f, d);
 	depthCmp.y = 1.0f - depthCmp.x;
@@ -66,11 +72,11 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	uint2 pixelPos = (uint2)pos.xy;
 	PS_OUTPUT DownPresortBufOut;
 
-	float Z = gZBuffer[uint2(pixelPos.x, pixelPos.y)].r;
+	float Z = gZBuffer[uint2(pixelPos.x * 2, pixelPos.y * 2)].r;
 	for (int i = 0; i < 2; i++) {
 		for (int j = 0; j < 2; j++) {
-			if (gZBuffer[uint2(pixelPos.x + i, pixelPos.y + j)].r > Z) {
-				Z = gZBuffer[uint2(pixelPos.x + i, pixelPos.y + j)].r;
+			if (gZBuffer[uint2(pixelPos.x * 2 + i, pixelPos.y * 2 + j)].r > Z) {
+				Z = gZBuffer[uint2(pixelPos.x * 2 + i, pixelPos.y * 2 + j)].r;
 			}
 		}
 	}
@@ -85,28 +91,31 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	//####################### downsample pass #######################################################
 
 	float4 halfResColor = gFrameColor.SampleLevel(gSampler, texC, 0);
-	//float4 halfResColor = float4(1.0f, 0.5f, 0.5f, 1.0f);
-	//float* sampleZ = float[9];
-	float sumZ = Z; //the Z from the downsample part, of target output
-	//float3* sampleColor = float3[9];
+	float* sampleZ = float[9];
+	float sumZ = depth(Z); //the Z from the downsample part, of target output
+	float3* sampleColor = float3[9];
 
-	/*
+	
 	for (int i = 0; i < 9; i++) {
 		//find sample location while scaling filter width with coc size 
 		sampleColor[i] = float3(0.0f, 0.0f, 0.0f);
 		float2 sampleLocation;
-		sampleLocation.x = (float)pixelPos.x * 2.0f + coc / 2.0f * cos(2.0f * PI* (float)i / 9.0f);
-		sampleLocation.y = (float)pixelPos.y * 2.0f + coc / 2.0f * sin(2.0f * PI* (float)i / 9.0f);
-		if(sampleLocation.x >= 0.0f && sampleLocation.x < gTextureWidth)
+		sampleLocation.x = ((float)pixelPos.x * 2.0f + coc / 2.0f * cos(2.0f * PI* (float)i / 9.0f)) / gTextureWidth;
+		sampleLocation.y = (float)pixelPos.y * 2.0f + coc / 2.0f * sin(2.0f * PI* (float)i / 9.0f) / gTextureHeight;
+		
 
-		//------------
-		sample_Z[i] = min(gather4(Z_buffer, sample_x, sample_y));
-		sample_color[i] = fetch(full_res_buffer, sample_x, sample_y); // bilinear fetch    
-		sum_z += sample_z[i];
+
+		//------------TODO fix the case of sampling on border with possible 0 values for the gather4...
+		sampleZ[i] = depth(min(gZBuffer.Gather(Z_buffer, sampleLocation)));
+		sampleColor[i] = gFrameColor.SampleLevel(gSampler, sampleLocation, 0);
+		sumZ += sampleZ[i];
 		//--------------
 	}
 	
-	*/
+	//float3 sumColor = halfResColor * Z / sumZ / (1 + (1 - STRENGTH_TWEAK) * luma(halfResColor));
+
+	
+	
 	
 
 

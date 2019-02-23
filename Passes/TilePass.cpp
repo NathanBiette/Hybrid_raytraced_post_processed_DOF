@@ -128,6 +128,8 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	shaderVars["cameraParametersCB"]["gFocalLength"] = mFocalLength;
 	shaderVars["cameraParametersCB"]["gDistanceToFocalPlane"] = mDistFocalPlane;
 	shaderVars["cameraParametersCB"]["gAperture"] = mAperture;
+	shaderVars["cameraParametersCB"]["gNear"] = mpScene->getActiveCamera()->getNearPlane();
+	shaderVars["cameraParametersCB"]["gFar"] = mpScene->getActiveCamera()->getFarPlane();
 
 
 	//shaderVars["gTileBuffer"] = outputTexture;
@@ -176,13 +178,14 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	downPresortShaderVars["cameraParametersCB"]["gFocalLength"] = mFocalLength;
 	downPresortShaderVars["cameraParametersCB"]["gDistanceToFocalPlane"] = mDistFocalPlane;
 	downPresortShaderVars["cameraParametersCB"]["gAperture"] = mAperture;
-	downPresortShaderVars["cameraParametersCB"]["gDepthRange"] = 10.0f;			//const of depth range here 
+	downPresortShaderVars["cameraParametersCB"]["gDepthRange"] = 100.0f;			//const of depth range here
 	downPresortShaderVars["cameraParametersCB"]["gSinglePixelRadius"] = 0.7071f;	//const of pixel radius
 	
-	downPresortShaderVars["cameraParametersCB"]["gTextureWidth"] = (int)mpResManager->getWidth();
-	downPresortShaderVars["cameraParametersCB"]["gTextureHeight"] = (int)mpResManager->getHeight();
-	//dilateShaderVars["textureParametersCB"]["gTextureWidth"] = (int)mpResManager->getWidth();
-	//dilateShaderVars["textureParametersCB"]["gTextureHeight"] = (int)mpResManager->getHeight();
+	downPresortShaderVars["cameraParametersCB"]["gTextureWidth"] = (float)mpResManager->getWidth();
+	downPresortShaderVars["cameraParametersCB"]["gTextureHeight"] = (float)mpResManager->getHeight();
+	downPresortShaderVars["cameraParametersCB"]["gNear"] = mpScene->getActiveCamera()->getNearPlane();
+	downPresortShaderVars["cameraParametersCB"]["gFar"] = mpScene->getActiveCamera()->getFarPlane();
+
 
 	
 	//trying to understand how to setup a clean sampler through the API
