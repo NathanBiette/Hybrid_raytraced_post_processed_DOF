@@ -40,9 +40,11 @@ protected:
 	bool initialize(RenderContext::SharedPtr pRenderContext, ResourceManager::SharedPtr pResManager) override;
 	void execute(RenderContext::SharedPtr pRenderContext) override;
 	//void resize(uint32_t width, uint32_t height) override;
+	void initScene(RenderContext::SharedPtr pRenderContext, Scene::SharedPtr pScene);
 
 	// The RenderPass class defines various methods we can override to specify this pass' properties. 
 	bool appliesPostprocess() override { return true; }
+	bool requiresScene() override { return true; }
 
 	// Shaders
 	FullscreenLaunch::SharedPtr   mpTilingShader;
@@ -52,5 +54,6 @@ protected:
 	GraphicsState::SharedPtr      mpGfxState;
 	Texture::SharedPtr            mpLastFrame;
 	Fbo::SharedPtr                mpInternalFbo;
-
+	
+	Scene::SharedPtr            mpScene;                ///< A pointer to the scene we're rendering
 };

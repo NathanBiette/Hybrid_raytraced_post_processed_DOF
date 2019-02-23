@@ -78,7 +78,16 @@ bool TilePass::initialize(RenderContext::SharedPtr pRenderContext, ResourceManag
 	mpTilingShader = FullscreenLaunch::create(kTilingShader);
 	mpDilateShader = FullscreenLaunch::create(kDilateShader);
 	mpDownPresortShader = FullscreenLaunch::create(kDownPresortShader);
+
 	return true;
+}
+
+void TilePass::initScene(RenderContext::SharedPtr pRenderContext, Scene::SharedPtr pScene)
+{
+	// Stash a copy of the scene
+	if (pScene)
+		mpScene = pScene;
+
 }
 
 /*
@@ -98,6 +107,8 @@ void TilePass::resize(uint32_t width, uint32_t height)
 
 void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 {
+	//Falcor::logWarning(std::string(" CAMERA SETTINGS ARE ") + std::to_string(mpScene->getActiveCamera()->getFarPlane()));
+
 	// Get our output buffer; clear it to black.
 	//Texture::SharedPtr outputTexture = mpResManager->getClearedTexture("Tiles", vec4(0.0f, 0.0f, 0.0f, 0.0f));
 	Texture::SharedPtr fullResZBuffer = mpResManager->getTexture("Z-Buffer");
@@ -117,6 +128,7 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	shaderVars["cameraParametersCB"]["gFocalLength"] = mFocalLength;
 	shaderVars["cameraParametersCB"]["gDistanceToFocalPlane"] = mDistFocalPlane;
 	shaderVars["cameraParametersCB"]["gAperture"] = mAperture;
+
 
 	//shaderVars["gTileBuffer"] = outputTexture;
 
