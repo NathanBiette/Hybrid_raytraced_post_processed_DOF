@@ -167,8 +167,8 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 
 	auto dilateShaderVars = mpDilateShader->getVars();
 	dilateShaderVars["gTiles"] = tiles;
-	dilateShaderVars["textureParametersCB"]["width"] = (int)mpResManager->getWidth();
-	dilateShaderVars["textureParametersCB"]["height"] = (int)mpResManager->getHeight();
+	dilateShaderVars["textureParametersCB"]["width"] = (int)mpResManager->getWidth() / 20;
+	dilateShaderVars["textureParametersCB"]["height"] = (int)mpResManager->getHeight() / 20;
 	mpGfxState->setFbo(outputFbo2);
 	mpDilateShader->execute(pRenderContext, mpGfxState);
 

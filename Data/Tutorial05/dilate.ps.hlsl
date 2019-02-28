@@ -12,9 +12,17 @@ float4 main(float2 texC : TEXCOORD, float4 pos : SV_Position) : SV_TARGET0
 
 	float max_coc = 0.0f;
 	float nearest_Z = gTiles[uint2(pixelPos.x, pixelPos.y)].g;
-	int start_x = max(pixelPos.x - 1, 0);
+
+	int start_x = 0;
+	int start_y = 0;
+	if (pixelPos.x > 0) {
+		start_x = pixelPos.x - 1;
+	}
+	if (pixelPos.y > 0) {
+		start_y = pixelPos.y - 1;
+	}
+
 	int stop_x = min(pixelPos.x + 1, width - 1);
-	int start_y = max(pixelPos.y - 1, 0);
 	int stop_y = min(pixelPos.y + 1, height - 1);
 
 	for (int i = start_x; i < stop_x + 1; i++) {
