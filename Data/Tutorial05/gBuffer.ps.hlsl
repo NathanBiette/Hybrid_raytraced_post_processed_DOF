@@ -20,10 +20,16 @@
 __import Shading;           // Imports ShaderCommon and DefaultVS, plus material evaluation
 __import DefaultVS;         // VertexOut declaration
 
+cbuffer cameraParametersCB
+{
+	float gNear;
+	float gFar;
+}
+
 struct GBuffer
 {
 	float4 color    : SV_Target0;  // Our color goes in color buffer 0
-	//float depth : SV_Depth;
+	float depth : SV_Target1;
 };
 
 // Our main entry point for the g-buffer fragment shader.
@@ -48,7 +54,7 @@ GBuffer main(VertexOut vsOut, uint primID : SV_PrimitiveID, float4 pos : SV_Posi
 	//float4x4 worldMat = getWorldMat(vsOut);
 	//float4 posW = mul(pos, worldMat);
 	//gBufOut.depth = mul(posW, gCamera.viewProjMat).z;		//gCamera comes from shaderCommon injection, we get the pixel fragment in clip space here with view projection matrix applied to world pos
-	//gBufOut.depth = pos.z;
+	gBufOut.depth = 2 * gFar * gNear / (gFar + gNear - (gFar - gNear) * (2 * pos.z - 1.0f));
 
 	return gBufOut;
 }

@@ -60,7 +60,6 @@ bool TilePass::initialize(RenderContext::SharedPtr pRenderContext, ResourceManag
 	int32_t height = (int32_t)mpResManager->getHeight();
 	printf("width = %d /n", width);
 	printf("height = %d /n", height);
-	//mpResManager->requestTextureResource("Tiles", ResourceFormat::R32Float,(Falcor::Resource::BindFlags)112U,500,500); //specifying size seems to work well
 	mpResManager->requestTextureResource("Tiles", ResourceFormat::RG16Float,(Falcor::Resource::BindFlags)112U, width / 20 , height / 20); //specifying size seems to work well
 	mpResManager->requestTextureResource("Dilate", ResourceFormat::RG16Float,(Falcor::Resource::BindFlags)112U, width / 20 , height / 20); 
 	//mpResManager->requestTextureResource("Half_res_color", ResourceFormat::RGB16Float,(Falcor::Resource::BindFlags)112U, width / 2 , height / 2);
@@ -107,11 +106,12 @@ void TilePass::resize(uint32_t width, uint32_t height)
 
 void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 {
-	//Falcor::logWarning(std::string(" CAMERA SETTINGS ARE ") + std::to_string(mpScene->getActiveCamera()->getFarPlane()));
+	Falcor::logWarning(std::string(" CAMERA SETTINGS ARE ") + std::to_string(mpScene->getActiveCamera()->getFarPlane()));
 
 	// Get our output buffer; clear it to black.
 	//Texture::SharedPtr outputTexture = mpResManager->getClearedTexture("Tiles", vec4(0.0f, 0.0f, 0.0f, 0.0f));
 	Texture::SharedPtr fullResZBuffer = mpResManager->getTexture("Z-Buffer");
+	Texture::SharedPtr ZBuffer = mpResManager->getTexture("ZBuffer");
 	// If our input texture is invalid, or we've been asked to skip accumulation, do nothing.
 	if (!fullResZBuffer) return;
 
@@ -124,7 +124,7 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	// Set shader parameters for our accumulation pass
 	auto shaderVars = mpTilingShader->getVars();
 	
-	shaderVars["gZBuffer"] = fullResZBuffer;
+	shaderVars["gZBuffer"] = ZBuffer;
 	shaderVars["cameraParametersCB"]["gFocalLength"] = mFocalLength;
 	shaderVars["cameraParametersCB"]["gDistanceToFocalPlane"] = mDistFocalPlane;
 	shaderVars["cameraParametersCB"]["gAperture"] = mAperture;
@@ -173,12 +173,12 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	
 	auto downPresortShaderVars = mpDownPresortShader->getVars();
 	downPresortShaderVars["gDilate"] = dilate;
-	downPresortShaderVars["gZBuffer"] = fullResZBuffer;
+	downPresortShaderVars["gZBuffer"] = ZBuffer;
 	downPresortShaderVars["gFrameColor"] = frameColor;
 	downPresortShaderVars["cameraParametersCB"]["gFocalLength"] = mFocalLength;
 	downPresortShaderVars["cameraParametersCB"]["gDistanceToFocalPlane"] = mDistFocalPlane;
 	downPresortShaderVars["cameraParametersCB"]["gAperture"] = mAperture;
-	downPresortShaderVars["cameraParametersCB"]["gDepthRange"] = 100.0f;			//const of depth range here
+	downPresortShaderVars["cameraParametersCB"]["gDepthRange"] = 1.0f;			//const of depth range here
 	downPresortShaderVars["cameraParametersCB"]["gSinglePixelRadius"] = 0.7071f;	//const of pixel radius
 	
 	downPresortShaderVars["cameraParametersCB"]["gTextureWidth"] = (float)mpResManager->getWidth();

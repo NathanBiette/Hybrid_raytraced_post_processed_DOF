@@ -46,16 +46,13 @@ struct PS_OUTPUT
 
 
 //################################## Helper functions ##############################
-float depth(float Z) {
-	return gNear + Z * (gFar - gNear);
-}
 
 float COC(float z) {
-	return abs(gAperture * gFocalLength * (gDistanceToFocalPlane - depth(z)) / (depth(z) * (gDistanceToFocalPlane - gFocalLength)));
+	return abs(gAperture * gFocalLength * (gDistanceToFocalPlane - z) / (z * (gDistanceToFocalPlane - gFocalLength)));
 }
 
 float2 DepthCmp2(float pixelDepth, float closestDepthInTile, float depthRange) {
-	float d = (depth(pixelDepth) - depth(closestDepthInTile)) / depthRange;
+	float d = (pixelDepth - closestDepthInTile) / depthRange;
 	float2 depthCmp;
 	depthCmp.x = smoothstep(0.0f, 1.0f, d);
 	depthCmp.y = 1.0f - depthCmp.x;
@@ -100,7 +97,7 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 
 	float4 halfResColor = gFrameColor.SampleLevel(gSampler, texC, 0);
 	float sampleZ[9] = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
-	float sumZ = depth(Z); //the Z from the downsample part, of target output
+	float sumZ = Z; //the Z from the downsample part, of target output
 	float3 sampleColor[9];
 	float4 Z4;
 	
@@ -115,7 +112,7 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 
 		//Here as we are supposedly sampling the Z buffer with the border to 0 sampler, if we sample outside, the min Z = 0 and sample doesn't count anyway
 		Z4 = gZBuffer.Gather(gSampler, sampleLocation);
-		sampleZ[i] = depth(min(min(min(Z4.r, Z4.g), Z4.b), Z4.a));
+		sampleZ[i] = min(min(min(Z4.r, Z4.g), Z4.b), Z4.a);
 		sampleColor[i] = gFrameColor.SampleLevel(gSampler, sampleLocation, 0).rgb;
 		sumZ += sampleZ[i];
 	}
@@ -126,8 +123,32 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 		sumColor += sampleColor[i] * sampleZ[i] / (sumZ * (1 + (1 - gStrengthTweak) * Luma(sampleColor[i])));
 	}
 	
-	//DownPresortBufOut.halfResColor = float4(sumColor.r, sumColor.g, sumColor.b, 1.0f);
-	DownPresortBufOut.halfResColor = gZBuffer.Gather(gSampler, texC);
+	DownPresortBufOut.halfResColor = float4(sumColor.r, sumColor.g, sumColor.b, 1.0f);
+	//DownPresortBufOut.halfResColor = gZBuffer.Gather(gSampler, texC);
+
+
+	/*
+		if (Z > 100.0f) {
+		DownPresortBufOut.halfResColor = float4(1.0f);
+	}
+	else if (Z > 50.0f) {
+		DownPresortBufOut.halfResColor = float4(0.75f);
+	}
+	else if (Z > 10.0f) {
+		DownPresortBufOut.halfResColor = float4(0.5f);
+	}
+	else if (Z > 5.0f) {
+		DownPresortBufOut.halfResColor = float4(0.25f);
+	}
+	else if (Z > 1.0f) {
+		DownPresortBufOut.halfResColor = float4(0.15f);
+	}
+	else {
+		DownPresortBufOut.halfResColor = float4(1.0f,0.0f,1.0f,1.0f);
+	}
+	*/
+
+
 	return DownPresortBufOut;
 }
 

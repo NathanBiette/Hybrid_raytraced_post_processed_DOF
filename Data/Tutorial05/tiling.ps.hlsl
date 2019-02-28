@@ -26,17 +26,12 @@ float4 main(float2 texC : TEXCOORD, float4 pos : SV_Position) : SV_TARGET0
 			}
 		}
 	}
-	// TODO : Look into normalization issue ...
 
 	float4 outColor = float4(max_coc, nearest_Z, 0.0f, 1.0f);
 
 	return outColor;
 }
 
-float depth(float Z) {
-	return gNear + Z * (gFar - gNear);
-}
-
 float COC(float z) {
-	return abs(gAperture * gFocalLength * (gDistanceToFocalPlane - depth(z)) / (depth(z) * (gDistanceToFocalPlane - gFocalLength)));
+	return abs(gAperture * gFocalLength * (gDistanceToFocalPlane - z) / (z * (gDistanceToFocalPlane - gFocalLength)));
 }
