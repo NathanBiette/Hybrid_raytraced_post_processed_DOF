@@ -27,6 +27,7 @@ cbuffer cameraParametersCB
 	float gTextureHeight;
 	float gNear;
 	float gFar;
+	float gStrengthTweak;
 }
 
 /*
@@ -65,6 +66,11 @@ float SampleAlpha(float coc, float singlePixelRadius) {
 	//samplecoc is radius of coc in pixels
 	return min(1.0f / (PI * coc * coc), 1.0f / (PI * singlePixelRadius * singlePixelRadius));
 }
+
+//supposing RGB color spaces use the ITU-R BT.709 primaries
+float Luma(float3 color) {
+	return 0.2126f*color.r + 0.7152f*color.g + 0.0722f*color.b;
+}
 //##################################################################################
 
 PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
@@ -81,6 +87,8 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 		}
 	}
 
+	//TODO fix displacement error from tiling passes -> seen in presort result
+
 	//####################### presort pass #######################################################
 	float coc = COC(Z);
 	float2 depthCmp2 = DepthCmp2(Z, gDilate[uint2(pixelPos.x / 10, pixelPos.y / 10)].g, gDepthRange);
@@ -91,10 +99,10 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	//####################### downsample pass #######################################################
 
 	float4 halfResColor = gFrameColor.SampleLevel(gSampler, texC, 0);
-	float* sampleZ = float[9];
+	float sampleZ[9] = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
 	float sumZ = depth(Z); //the Z from the downsample part, of target output
-	float3* sampleColor = float3[9];
-
+	float3 sampleColor[9];
+	float4 Z4;
 	
 	for (int i = 0; i < 9; i++) {
 		//find sample location while scaling filter width with coc size 
@@ -105,24 +113,21 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 		
 
 
-		//------------TODO fix the case of sampling on border with possible 0 values for the gather4...
-		sampleZ[i] = depth(min(gZBuffer.Gather(Z_buffer, sampleLocation)));
-		sampleColor[i] = gFrameColor.SampleLevel(gSampler, sampleLocation, 0);
+		//Here as we are supposedly sampling the Z buffer with the border to 0 sampler, if we sample outside, the min Z = 0 and sample doesn't count anyway
+		Z4 = gZBuffer.Gather(gSampler, sampleLocation);
+		sampleZ[i] = depth(min(min(min(Z4.r, Z4.g), Z4.b), Z4.a));
+		sampleColor[i] = gFrameColor.SampleLevel(gSampler, sampleLocation, 0).rgb;
 		sumZ += sampleZ[i];
-		//--------------
+	}
+
+	float3 sumColor = halfResColor.rgb * Z / (sumZ * (1 + (1 - gStrengthTweak) * Luma(halfResColor.rgb)));
+
+	for (int i = 0; i < 9; i++) {
+		sumColor += sampleColor[i] * sampleZ[i] / (sumZ * (1 + (1 - gStrengthTweak) * Luma(sampleColor[i])));
 	}
 	
-	//float3 sumColor = halfResColor * Z / sumZ / (1 + (1 - STRENGTH_TWEAK) * luma(halfResColor));
-
-	
-	
-	
-
-
-
-	DownPresortBufOut.halfResColor = halfResColor;
-	
-	
+	//DownPresortBufOut.halfResColor = float4(sumColor.r, sumColor.g, sumColor.b, 1.0f);
+	DownPresortBufOut.halfResColor = gZBuffer.Gather(gSampler, texC);
 	return DownPresortBufOut;
 }
 

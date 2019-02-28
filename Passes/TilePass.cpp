@@ -185,6 +185,7 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	downPresortShaderVars["cameraParametersCB"]["gTextureHeight"] = (float)mpResManager->getHeight();
 	downPresortShaderVars["cameraParametersCB"]["gNear"] = mpScene->getActiveCamera()->getNearPlane();
 	downPresortShaderVars["cameraParametersCB"]["gFar"] = mpScene->getActiveCamera()->getFarPlane();
+	downPresortShaderVars["cameraParametersCB"]["gStrengthTweak"] = 0.5f;
 
 
 	
