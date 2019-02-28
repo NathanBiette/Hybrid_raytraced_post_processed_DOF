@@ -56,13 +56,22 @@ bool TilePass::initialize(RenderContext::SharedPtr pRenderContext, ResourceManag
 	//#######################################
 
 	//Get size of full screen image
+	/*
+	//Viewport isn't even initialized just yet ....
 	int32_t width = (int32_t)mpResManager->getWidth();
 	int32_t height = (int32_t)mpResManager->getHeight();
-	printf("width = %d /n", width);
-	printf("height = %d /n", height);
+	*/
+	int32_t width = 1920;
+	int32_t height = 1080;
+
+	Falcor::logWarning(std::string("INITIALIZATION - VIEWPORT WIDTH = ") + std::to_string(mpResManager->getWidth()));
+	Falcor::logWarning(std::string("INITIALIZATION - VIEWPORT HEIGHT = ") + std::to_string(mpResManager->getHeight()));
+
 	mpResManager->requestTextureResource("Tiles", ResourceFormat::RG16Float,(Falcor::Resource::BindFlags)112U, width / 20 , height / 20); //specifying size seems to work well
 	mpResManager->requestTextureResource("Dilate", ResourceFormat::RG16Float,(Falcor::Resource::BindFlags)112U, width / 20 , height / 20); 
 	//mpResManager->requestTextureResource("Half_res_color", ResourceFormat::RGB16Float,(Falcor::Resource::BindFlags)112U, width / 2 , height / 2);
+
+	//mptest = Texture::create2D(width / 20, height / 20, ResourceFormat::RG16Float);
 	
 	mpResManager->requestTextureResource("Half_res_color", ResourceFormat::RGBA16Float,(Falcor::Resource::BindFlags)112U, width / 2 , height / 2);
 	mpResManager->requestTextureResource("Presort_buffer", ResourceFormat::RGBA16Float,(Falcor::Resource::BindFlags)112U, width / 2 , height / 2);
@@ -107,13 +116,15 @@ void TilePass::resize(uint32_t width, uint32_t height)
 void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 {
 	Falcor::logWarning(std::string(" CAMERA SETTINGS ARE ") + std::to_string(mpScene->getActiveCamera()->getFarPlane()));
+	Falcor::logWarning(std::string("INITIALIZATION - VIEWPORT WIDTH = ") + std::to_string(mpResManager->getWidth()));
+	Falcor::logWarning(std::string("INITIALIZATION - VIEWPORT HEIGHT = ") + std::to_string(mpResManager->getHeight()));
 
 	// Get our output buffer; clear it to black.
 	//Texture::SharedPtr outputTexture = mpResManager->getClearedTexture("Tiles", vec4(0.0f, 0.0f, 0.0f, 0.0f));
-	Texture::SharedPtr fullResZBuffer = mpResManager->getTexture("Z-Buffer");
+	//Texture::SharedPtr fullResZBuffer = mpResManager->getTexture("Z-Buffer");
 	Texture::SharedPtr ZBuffer = mpResManager->getTexture("ZBuffer");
 	// If our input texture is invalid, or we've been asked to skip accumulation, do nothing.
-	if (!fullResZBuffer) return;
+	if (!ZBuffer) return;
 
 	Fbo::SharedPtr outputFbo = mpResManager->createManagedFbo({"Tiles" }, "Z-Buffer2");
 	// Failed to create a valid FBO?  We're done.

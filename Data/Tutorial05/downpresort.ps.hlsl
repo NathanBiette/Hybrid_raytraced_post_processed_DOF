@@ -124,16 +124,22 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	}
 	
 	DownPresortBufOut.halfResColor = float4(sumColor.r, sumColor.g, sumColor.b, 1.0f);
+	//DownPresortBufOut.halfResColor = halfResColor;
 	//DownPresortBufOut.halfResColor = gZBuffer.Gather(gSampler, texC);
 
 
+
 	/*
-		if (Z > 100.0f) {
+	float width;
+	float height;
+	gDilate.GetDimensions(width, height);
+	if (width> 1920.0f) {
 		DownPresortBufOut.halfResColor = float4(1.0f);
 	}
-	else if (Z > 50.0f) {
+	else if (width > 1919.0f) {
 		DownPresortBufOut.halfResColor = float4(0.75f);
 	}
+	/*
 	else if (Z > 10.0f) {
 		DownPresortBufOut.halfResColor = float4(0.5f);
 	}
@@ -143,6 +149,7 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	else if (Z > 1.0f) {
 		DownPresortBufOut.halfResColor = float4(0.15f);
 	}
+	
 	else {
 		DownPresortBufOut.halfResColor = float4(1.0f,0.0f,1.0f,1.0f);
 	}
