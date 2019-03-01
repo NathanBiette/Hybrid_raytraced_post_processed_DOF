@@ -41,13 +41,16 @@ cbuffer textureParametersCB
 struct PS_OUTPUT
 
 {
-	float4 halfResColor    : SV_Target0;  // Our color goes in color buffer 0
-	float4 presortBuffer    : SV_Target1;  // Our color goes in buffer 1
+	float4 halfResColor    : SV_Target0;
+	float4 presortBuffer    : SV_Target1;  
+	float4 halfResZBuffer	: SV_Target2;
 };
 
 
 //################################## Helper functions ##############################
 /*
+COC size reminder
+
 float mFNumber = 2.0f;                  // f number (typeless) = F/A (A = aperture)
 float mFocalLength = 0.05f;              // here we take 50mm of focal length
 float mDistFocalPlane = 1.0f;				// What is our distance to focal plane (meaning where we focus on, 1m here)
@@ -117,8 +120,10 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 		//find sample location while scaling filter width with coc size 
 		sampleColor[i] = float3(0.0f, 0.0f, 0.0f);
 		float2 sampleLocation;
-		sampleLocation.x = ((float)pixelPos.x * 2.0f + coc / 2.0f * cos(2.0f * PI* (float)i / 9.0f)) / gTextureWidth;
-		sampleLocation.y = (float)pixelPos.y * 2.0f + coc / 2.0f * sin(2.0f * PI* (float)i / 9.0f) / gTextureHeight;
+		// to get location of the sample : take the center of current pixel, get the rigth angle according to index of sample on unit circle and get the rigth distance to center pixel
+		// the distance to pixel is the COC (diameter) size / 12 (coc /(2*6) 2 is to get the radius, 6 is to fill in the space between main filter samples (3 circles of sample, 49taps)) 
+		sampleLocation.x = ((float)pixelPos.x * 2.0f + coc / 12.0f * cos(2.0f * PI* (float)i / 9.0f)) / gTextureWidth;
+		sampleLocation.y = (float)pixelPos.y * 2.0f + coc / 12.0f * sin(2.0f * PI* (float)i / 9.0f) / gTextureHeight;
 		
 
 
@@ -136,6 +141,7 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	}
 	
 	DownPresortBufOut.halfResColor = float4(sumColor.r, sumColor.g, sumColor.b, 1.0f);
+	DownPresortBufOut.halfResZBuffer = float4(Z, 0.0f, 0.0f, 0.0f);
 	//DownPresortBufOut.halfResColor = halfResColor;
 	//DownPresortBufOut.halfResColor = gZBuffer.Gather(gSampler, texC);
 
@@ -165,7 +171,6 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 		DownPresortBufOut.halfResColor = float4(1.0f,0.0f,1.0f,1.0f);
 	}
 	*/
-
 
 	return DownPresortBufOut;
 }

@@ -75,6 +75,10 @@ bool TilePass::initialize(RenderContext::SharedPtr pRenderContext, ResourceManag
 	
 	mpResManager->requestTextureResource("Half_res_color", ResourceFormat::RGBA16Float,(Falcor::Resource::BindFlags)112U, width / 2 , height / 2);
 	mpResManager->requestTextureResource("Presort_buffer", ResourceFormat::RGBA16Float,(Falcor::Resource::BindFlags)112U, width / 2 , height / 2);
+	mpResManager->requestTextureResource("Half_res_z_buffer", ResourceFormat::R32Float, (Falcor::Resource::BindFlags)112U, width / 2, height / 2);
+
+	mpResManager->requestTextureResource("Half_res_far_field", ResourceFormat::RGBA16Float, (Falcor::Resource::BindFlags)112U, width / 2, height / 2);
+	mpResManager->requestTextureResource("Half_res_near_field", ResourceFormat::RGBA16Float, (Falcor::Resource::BindFlags)112U, width / 2, height / 2);
 	
 	//mpResManager->requestTextureResource("Tiles", ResourceFormat::R32Float);
 	//mpResManager->requestTextureResource("Tiles");
@@ -175,7 +179,7 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	//########################  Third pass -> downPresort pass  ########################################
 	
 	
-	Fbo::SharedPtr outputFbo3 = mpResManager->createManagedFbo({ "Half_res_color", "Presort_buffer" }, "Z-Buffer2");
+	Fbo::SharedPtr outputFbo3 = mpResManager->createManagedFbo({ "Half_res_color", "Presort_buffer", "Half_res_z_buffer" }, "Z-Buffer2");
 	if (!outputFbo) return;
 	pRenderContext->clearFbo(outputFbo3.get(), vec4(0.0f, 0.0f, 0.0f, 0.0f), 1.0f, 0);
 	
