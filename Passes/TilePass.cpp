@@ -23,6 +23,7 @@ namespace {
 	const char *kTilingShader = "Tutorial05\\tiling.ps.hlsl";
 	const char *kDilateShader = "Tutorial05\\dilate.ps.hlsl";
 	const char *kDownPresortShader = "Tutorial05\\downpresort.ps.hlsl";
+	const char *kMainPassShader = "Tutorial05\\mainpass.ps.hlsl";
 };
 
 // Define our constructor methods
@@ -90,6 +91,7 @@ bool TilePass::initialize(RenderContext::SharedPtr pRenderContext, ResourceManag
 	mpTilingShader = FullscreenLaunch::create(kTilingShader);
 	mpDilateShader = FullscreenLaunch::create(kDilateShader);
 	mpDownPresortShader = FullscreenLaunch::create(kDownPresortShader);
+	mpMainPassShader = FullscreenLaunch::create(kMainPassShader);
 
 	return true;
 }
@@ -206,26 +208,57 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 
 
 	
-	//trying to understand how to setup a clean sampler through the API
-	
-	
+	//Setup a clean sampler through the API
 	Sampler::SharedPtr mpSampler;
 	Sampler::Desc samplerDesc;
-	ProgramReflection::SharedConstPtr pReflector;
+	ProgramReflection::SharedConstPtr pReflectorDownPresortPass;
 	ParameterBlockReflection::BindLocation samplerBindLocation;
 
 	samplerDesc.setFilterMode(Sampler::Filter::Linear, Sampler::Filter::Linear, Sampler::Filter::Point).setAddressingMode(Sampler::AddressMode::Border, Sampler::AddressMode::Border, Sampler::AddressMode::Border);
 	//samplerDesc.setFilterMode(Sampler::Filter::Linear, Sampler::Filter::Linear, Sampler::Filter::Point).setAddressingMode(Sampler::AddressMode::Border, Sampler::AddressMode::Border, Sampler::AddressMode::Border).setLodParams(0.0f, 0.0f, 0.0f);
 	mpSampler = Sampler::create(samplerDesc);
 	
-	pReflector = mpDownPresortShader->getProgramReflection();
-	samplerBindLocation = pReflector->getDefaultParameterBlock()->getResourceBinding("gSampler");
+	pReflectorDownPresortPass = mpDownPresortShader->getProgramReflection();
+	samplerBindLocation = pReflectorDownPresortPass->getDefaultParameterBlock()->getResourceBinding("gSampler");
 	ParameterBlock* pDefaultBlock = downPresortShaderVars->getVars()->getDefaultBlock().get();
 	pDefaultBlock->setSampler(samplerBindLocation, 0, mpSampler);
-	
-	
 	//----------------- end sampler section -------------------
+
 	mpGfxState->setFbo(outputFbo3);
 	mpDownPresortShader->execute(pRenderContext, mpGfxState);
-	
+
+	//########################  Fourth pass -> main pass  ########################################
+	Fbo::SharedPtr outputFbo4 = mpResManager->createManagedFbo({ "Half_res_far_field", "Half_res_near_field" }, "Z-Buffer2");
+	if (!outputFbo) return;
+	pRenderContext->clearFbo(outputFbo4.get(), vec4(0.0f, 0.0f, 0.0f, 0.0f), 1.0f, 0);
+
+	//getting the texture to pass to our shader
+	Texture::SharedPtr halfResColor = mpResManager->getTexture("Half_res_color");
+	Texture::SharedPtr presortBuffer = mpResManager->getTexture("Presort_buffer");
+	Texture::SharedPtr HalfResZBuffer = mpResManager->getTexture("Half_res_z_buffer");
+
+	//shader vars setup
+	auto mainPassShaderVars = mpMainPassShader->getVars();
+	mainPassShaderVars["gDilate"] = dilate;
+	mainPassShaderVars["gHalfResZBuffer"] = HalfResZBuffer;
+	mainPassShaderVars["gHalfResFrameColor"] = halfResColor;
+	mainPassShaderVars["gPresortBuffer"] = presortBuffer;
+	mainPassShaderVars["cameraParametersCB"]["gDistanceToFocalPlane"] = mDistFocalPlane;
+	mainPassShaderVars["cameraParametersCB"]["gOffset"] = 0.01f /*FAKE VALUE , NEED COMPUTATION HERE*/;
+
+	//sampler setup
+	Sampler::SharedPtr mpPointSampler;
+	Sampler::Desc pointSamplerDesc;
+	ProgramReflection::SharedConstPtr pReflectorMainPass;
+	ParameterBlockReflection::BindLocation pointSamplerBindLocation;
+	pointSamplerDesc.setFilterMode(Sampler::Filter::Point, Sampler::Filter::Point, Sampler::Filter::Point).setAddressingMode(Sampler::AddressMode::Border, Sampler::AddressMode::Border, Sampler::AddressMode::Border);
+	mpPointSampler = Sampler::create(pointSamplerDesc);
+	pReflectorMainPass = mpMainPassShader->getProgramReflection();
+	pointSamplerBindLocation = pReflectorMainPass->getDefaultParameterBlock()->getResourceBinding("gSampler");
+	ParameterBlock* pDefaultBlock = mainPassShaderVars->getVars()->getDefaultBlock().get();
+	pDefaultBlock->setSampler(pointSamplerBindLocation, 0, mpPointSampler);
+
+
+	mpGfxState->setFbo(outputFbo4);
+	mpMainPassShader->execute(pRenderContext, mpGfxState);
 }

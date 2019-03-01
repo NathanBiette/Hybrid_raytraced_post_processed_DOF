@@ -99,8 +99,6 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 		}
 	}
 
-	//TODO fix displacement error from tiling passes -> seen in presort result
-
 	//####################### presort pass #######################################################
 	float coc = COC(Z);
 	float2 depthCmp2 = DepthCmp2(Z, gDilate[uint2(pixelPos.x / 10, pixelPos.y / 10)].g, gDepthRange);
@@ -124,8 +122,6 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 		// the distance to pixel is the COC (diameter) size / 12 (coc /(2*6) 2 is to get the radius, 6 is to fill in the space between main filter samples (3 circles of sample, 49taps)) 
 		sampleLocation.x = ((float)pixelPos.x * 2.0f + coc / 12.0f * cos(2.0f * PI* (float)i / 9.0f)) / gTextureWidth;
 		sampleLocation.y = (float)pixelPos.y * 2.0f + coc / 12.0f * sin(2.0f * PI* (float)i / 9.0f) / gTextureHeight;
-		
-
 
 		//Here as we are supposedly sampling the Z buffer with the border to 0 sampler, if we sample outside, the min Z = 0 and sample doesn't count anyway
 		Z4 = gZBuffer.Gather(gSampler, sampleLocation);
@@ -142,6 +138,9 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	
 	DownPresortBufOut.halfResColor = float4(sumColor.r, sumColor.g, sumColor.b, 1.0f);
 	DownPresortBufOut.halfResZBuffer = float4(Z, 0.0f, 0.0f, 0.0f);
+	
+	//########################## debug zone ############################################################
+	
 	//DownPresortBufOut.halfResColor = halfResColor;
 	//DownPresortBufOut.halfResColor = gZBuffer.Gather(gSampler, texC);
 
@@ -171,6 +170,7 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 		DownPresortBufOut.halfResColor = float4(1.0f,0.0f,1.0f,1.0f);
 	}
 	*/
+	//#################################################################################################
 
 	return DownPresortBufOut;
 }

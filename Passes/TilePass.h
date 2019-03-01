@@ -52,6 +52,7 @@ protected:
 	FullscreenLaunch::SharedPtr   mpTilingShader;
 	FullscreenLaunch::SharedPtr   mpDilateShader;
 	FullscreenLaunch::SharedPtr   mpDownPresortShader;
+	FullscreenLaunch::SharedPtr   mpMainPassShader;
 	// State for our accumulation shader
 	GraphicsState::SharedPtr      mpGfxState;
 	Texture::SharedPtr            mpLastFrame;
