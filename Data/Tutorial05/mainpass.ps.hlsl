@@ -18,6 +18,8 @@ cbuffer cameraParametersCB
 	float gDistanceToFocalPlane;
 }
 
+Buffer<float> weights;
+
 PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 {
 	PS_OUTPUT MainPassBufOut;
@@ -30,7 +32,7 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	float coc = gDilate[uint2(pixelPos.x / 10, pixelPos.y / 10)].r; //max coc in tile
 
 	float2 kernel[49];
-
+	/*
 	for (int i = 0; i < 49 - 1; i++) {
 		if (i < 24) {
 			kernel[i].x = cos(2.0f * PI* (float)i / 24.0f) * 
@@ -46,9 +48,19 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 		}
 		
 	}
+	*/
+	
+	if (weights[0]==1.2f) {
+		MainPassBufOut.halfResFarField = float4(1.0f, 0.0f, 1.0f, 1.0f);
+	}
+	else if(weights[0] == 0.0f) {
+		MainPassBufOut.halfResFarField = float4(1.0f, 0.0f, 0.0f, 1.0f);
+	}
+	else{
+		MainPassBufOut.halfResFarField = float4(1.0f, 1.0f, 1.0f, 1.0f);
+	}
 
-
-
+	/*
 
 	//#case 1:  where foreground and background will contribute to far field only
 
@@ -120,7 +132,7 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 		near_field_buffer = float4(lerp(foreground.rgb, background.rgb, foreground.a), 1.0);
 		write(near_field_buffer, frag.x, frag.y, near_field_value);
 	}
-
+	*/
 
 	return MainPassBufOut;
 }

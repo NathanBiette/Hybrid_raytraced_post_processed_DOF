@@ -93,6 +93,27 @@ bool TilePass::initialize(RenderContext::SharedPtr pRenderContext, ResourceManag
 	mpDownPresortShader = FullscreenLaunch::create(kDownPresortShader);
 	mpMainPassShader = FullscreenLaunch::create(kMainPassShader);
 
+	//setup the kernel for main pass
+	
+	/*
+	std::vector<float> weights(center + 1);
+
+	for (int i = 0; i < 49 - 1; i++) {
+		if (i < 24) {
+			kernel[i].x = cos(2.0f * PI* (float)i / 24.0f) *
+
+				((float)pixelPos.x * 2.0f + coc / 12.0f *) / gTextureWidth;
+			kernel[i].y = (float)pixelPos.y * 2.0f + coc / 12.0f * sin(2.0f * PI* (float)i / 9.0f) / gTextureHeight;
+		}
+		else if (i < 39) {
+
+		}
+		else {
+
+		}
+
+	}*/
+
 	return true;
 }
 
@@ -244,7 +265,7 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	mainPassShaderVars["gHalfResFrameColor"] = halfResColor;
 	mainPassShaderVars["gPresortBuffer"] = presortBuffer;
 	mainPassShaderVars["cameraParametersCB"]["gDistanceToFocalPlane"] = mDistFocalPlane;
-	mainPassShaderVars["cameraParametersCB"]["gOffset"] = 0.01f /*FAKE VALUE , NEED COMPUTATION HERE*/;
+	mainPassShaderVars["cameraParametersCB"]["gOffset"] = 0.01f; /*FAKE VALUE , NEED COMPUTATION HERE*/
 
 	//sampler setup
 	Sampler::SharedPtr mpPointSampler;
@@ -255,8 +276,20 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	mpPointSampler = Sampler::create(pointSamplerDesc);
 	pReflectorMainPass = mpMainPassShader->getProgramReflection();
 	pointSamplerBindLocation = pReflectorMainPass->getDefaultParameterBlock()->getResourceBinding("gSampler");
-	ParameterBlock* pDefaultBlock = mainPassShaderVars->getVars()->getDefaultBlock().get();
-	pDefaultBlock->setSampler(pointSamplerBindLocation, 0, mpPointSampler);
+	ParameterBlock* pDefaultBlockPointSampler = mainPassShaderVars->getVars()->getDefaultBlock().get();
+	pDefaultBlockPointSampler->setSampler(pointSamplerBindLocation, 0, mpPointSampler);
+
+
+	std::vector<float> test(3);
+	test[0] = 1.2f;
+	//mainPassShaderVars["cameraParametersCB"]["gkernel"] = test; /*FAKE VALUE , NEED COMPUTATION HERE*/
+	GraphicsVars::SharedPtr mpVars = GraphicsVars::create(pReflectorMainPass);
+	TypedBuffer<float>::SharedPtr pBuf = TypedBuffer<float>::create(3, Resource::BindFlags::ShaderResource);
+	pBuf[0] = 1.2f;
+	pBuf[1] = 1.0f;
+	pBuf[2] = 1.0f;
+	bool succeed = mpVars->setTypedBuffer("weights", pBuf);
+	Falcor::logWarning(std::string("buffer success ? = ") + std::to_string(succeed));
 
 
 	mpGfxState->setFbo(outputFbo4);
