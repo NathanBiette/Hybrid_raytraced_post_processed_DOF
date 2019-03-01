@@ -21,6 +21,7 @@ cbuffer cameraParametersCB
 	float gFocalLength;
 	float gDistanceToFocalPlane;
 	float gAperture;
+	float gSensorWidth;
 	float gDepthRange;
 	float gSinglePixelRadius;
 	float gTextureWidth;
@@ -46,9 +47,20 @@ struct PS_OUTPUT
 
 
 //################################## Helper functions ##############################
+/*
+float mFNumber = 2.0f;                  // f number (typeless) = F/A (A = aperture)
+float mFocalLength = 0.05f;              // here we take 50mm of focal length
+float mDistFocalPlane = 1.0f;				// What is our distance to focal plane (meaning where we focus on, 1m here)
+float mAperture = mFocalLength / mFNumber = 0.025;
 
+for an object at 0.5 m coc = 0.025 * 0.05 * (1.0 - 0.5) / (0.5 * (1 - 0.05)) = 0.001315 m = 1.315 mm
+coc in pixel = 0.001315 * 1920 / 0.036 = 70.1754
+
+*/
+
+//COC diameter in pixels 
 float COC(float z) {
-	return abs(gAperture * gFocalLength * (gDistanceToFocalPlane - z) / (z * (gDistanceToFocalPlane - gFocalLength)));
+	return abs(gAperture * gFocalLength * (gDistanceToFocalPlane - z) / (z * (gDistanceToFocalPlane - gFocalLength))) * gTextureWidth / gSensorWidth;
 }
 
 float2 DepthCmp2(float pixelDepth, float closestDepthInTile, float depthRange) {
@@ -59,9 +71,9 @@ float2 DepthCmp2(float pixelDepth, float closestDepthInTile, float depthRange) {
 	return depthCmp;
 }
 
-float SampleAlpha(float coc, float singlePixelRadius) {
+float SampleAlpha(float cocRadius, float singlePixelRadius) {
 	//samplecoc is radius of coc in pixels
-	return min(1.0f / (PI * coc * coc), 1.0f / (PI * singlePixelRadius * singlePixelRadius));
+	return min(1.0f / (PI * cocRadius * cocRadius), 1.0f / (PI * singlePixelRadius * singlePixelRadius));
 }
 
 //supposing RGB color spaces use the ITU-R BT.709 primaries
@@ -126,7 +138,6 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	DownPresortBufOut.halfResColor = float4(sumColor.r, sumColor.g, sumColor.b, 1.0f);
 	//DownPresortBufOut.halfResColor = halfResColor;
 	//DownPresortBufOut.halfResColor = gZBuffer.Gather(gSampler, texC);
-
 
 
 	/*

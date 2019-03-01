@@ -5,8 +5,8 @@ cbuffer cameraParametersCB
 	float gFocalLength;
 	float gDistanceToFocalPlane;
 	float gAperture;
-	float gNear;
-	float gFar;
+	float gSensorWidth;
+	float gTextureWidth;
 }
 
 float4 main(float2 texC : TEXCOORD, float4 pos : SV_Position) : SV_TARGET0
@@ -32,6 +32,7 @@ float4 main(float2 texC : TEXCOORD, float4 pos : SV_Position) : SV_TARGET0
 	return outColor;
 }
 
+//COC diameter in pixels
 float COC(float z) {
-	return abs(gAperture * gFocalLength * (gDistanceToFocalPlane - z) / (z * (gDistanceToFocalPlane - gFocalLength)));
+	return abs(gAperture * gFocalLength * (gDistanceToFocalPlane - z) / (z * (gDistanceToFocalPlane - gFocalLength)))  * gTextureWidth / gSensorWidth;
 }

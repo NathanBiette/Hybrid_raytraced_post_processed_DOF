@@ -32,9 +32,11 @@ protected:
 
 	//Thin lens parameters
 	float mFNumber = 2.0f;                  // f number (typeless) = F/A (A = aperture)
-	float mFocalLength = 0.05f;              // here we take 50mm of focal length 
+	float mFocalLength = 0.005f;              // here we take 50mm of focal length 
 	float mDistFocalPlane = 1.0f;				// What is our distance to focal plane (meaning where we focus on, 1m here)
 	float mAperture = mFocalLength / mFNumber;
+	//full frame camera = 36x24 mm 
+	float mSensorWidth = 0.036f;
 
 	// Implementation of SimpleRenderPass interface
 	bool initialize(RenderContext::SharedPtr pRenderContext, ResourceManager::SharedPtr pResManager) override;

@@ -139,8 +139,8 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	shaderVars["cameraParametersCB"]["gFocalLength"] = mFocalLength;
 	shaderVars["cameraParametersCB"]["gDistanceToFocalPlane"] = mDistFocalPlane;
 	shaderVars["cameraParametersCB"]["gAperture"] = mAperture;
-	shaderVars["cameraParametersCB"]["gNear"] = mpScene->getActiveCamera()->getNearPlane();
-	shaderVars["cameraParametersCB"]["gFar"] = mpScene->getActiveCamera()->getFarPlane();
+	shaderVars["cameraParametersCB"]["gSensorWidth"] = mSensorWidth;
+	shaderVars["cameraParametersCB"]["gTextureWidth"] = (float)mpResManager->getWidth();
 
 
 	//shaderVars["gTileBuffer"] = outputTexture;
@@ -189,7 +189,9 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	downPresortShaderVars["cameraParametersCB"]["gFocalLength"] = mFocalLength;
 	downPresortShaderVars["cameraParametersCB"]["gDistanceToFocalPlane"] = mDistFocalPlane;
 	downPresortShaderVars["cameraParametersCB"]["gAperture"] = mAperture;
+	downPresortShaderVars["cameraParametersCB"]["gSensorWidth"] = mSensorWidth;
 	downPresortShaderVars["cameraParametersCB"]["gDepthRange"] = 1.0f;			//const of depth range here
+	
 	downPresortShaderVars["cameraParametersCB"]["gSinglePixelRadius"] = 0.7071f;	//const of pixel radius
 	
 	downPresortShaderVars["cameraParametersCB"]["gTextureWidth"] = (float)mpResManager->getWidth();
