@@ -59,6 +59,6 @@ protected:
 	Fbo::SharedPtr                mpInternalFbo;
 	
 	Scene::SharedPtr            mpScene;                ///< A pointer to the scene we're rendering
-
+	GraphicsVars::SharedPtr		mpVars;
 	Texture::SharedPtr mptest;
 };

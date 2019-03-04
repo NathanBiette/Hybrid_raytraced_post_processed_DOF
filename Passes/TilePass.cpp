@@ -93,6 +93,21 @@ bool TilePass::initialize(RenderContext::SharedPtr pRenderContext, ResourceManag
 	mpDownPresortShader = FullscreenLaunch::create(kDownPresortShader);
 	mpMainPassShader = FullscreenLaunch::create(kMainPassShader);
 
+	//NOT WORKING !!!
+	/*
+	ProgramReflection::SharedConstPtr pReflector = mpMainPassShader->getProgramReflection();
+	mpVars = GraphicsVars::create(pReflector);
+	TypedBuffer<float>::SharedPtr pBuf = TypedBuffer<float>::create((uint32_t)3, Resource::BindFlags::ShaderResource);
+	pBuf[0] = (float)1.2f;
+	pBuf[1] = (float)1.0f;
+	pBuf[2] = (float)1.0f;
+	bool succeed = mpVars->setTypedBuffer("weights", pBuf);
+	Falcor::logWarning(std::string("buffer success ? = ") + std::to_string(succeed));
+	Falcor::logWarning(std::string("pbuffer 0 ? = ") + std::to_string(pBuf[0]));
+	Falcor::logWarning(std::string("pbuffer 1 ? = ") + std::to_string(pBuf[1]));
+	Falcor::logWarning(std::string("pbuffer 2 ? = ") + std::to_string(pBuf[2]));
+	*/
+	
 	//setup the kernel for main pass
 	
 	/*
@@ -258,6 +273,8 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	Texture::SharedPtr presortBuffer = mpResManager->getTexture("Presort_buffer");
 	Texture::SharedPtr HalfResZBuffer = mpResManager->getTexture("Half_res_z_buffer");
 
+	
+
 	//shader vars setup
 	auto mainPassShaderVars = mpMainPassShader->getVars();
 	mainPassShaderVars["gDilate"] = dilate;
@@ -265,7 +282,9 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	mainPassShaderVars["gHalfResFrameColor"] = halfResColor;
 	mainPassShaderVars["gPresortBuffer"] = presortBuffer;
 	mainPassShaderVars["cameraParametersCB"]["gDistanceToFocalPlane"] = mDistFocalPlane;
-	mainPassShaderVars["cameraParametersCB"]["gOffset"] = 0.01f; /*FAKE VALUE , NEED COMPUTATION HERE*/
+	mainPassShaderVars["cameraParametersCB"]["gOffset"] = 0.01f; //FAKE VALUE , NEED COMPUTATION HERE
+	mainPassShaderVars["cameraParametersCB"]["gTextureWidth"] = (float)mpResManager->getWidth();
+	mainPassShaderVars["cameraParametersCB"]["gTextureHeight"] = (float)mpResManager->getHeight();
 
 	//sampler setup
 	Sampler::SharedPtr mpPointSampler;
@@ -279,10 +298,13 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	ParameterBlock* pDefaultBlockPointSampler = mainPassShaderVars->getVars()->getDefaultBlock().get();
 	pDefaultBlockPointSampler->setSampler(pointSamplerBindLocation, 0, mpPointSampler);
 
+	
 
+	/*
+	
 	std::vector<float> test(3);
 	test[0] = 1.2f;
-	//mainPassShaderVars["cameraParametersCB"]["gkernel"] = test; /*FAKE VALUE , NEED COMPUTATION HERE*/
+	//mainPassShaderVars["cameraParametersCB"]["gkernel"] = test; //FAKE VALUE , NEED COMPUTATION HERE
 	GraphicsVars::SharedPtr mpVars = GraphicsVars::create(pReflectorMainPass);
 	TypedBuffer<float>::SharedPtr pBuf = TypedBuffer<float>::create(3, Resource::BindFlags::ShaderResource);
 	pBuf[0] = 1.2f;
@@ -290,8 +312,8 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	pBuf[2] = 1.0f;
 	bool succeed = mpVars->setTypedBuffer("weights", pBuf);
 	Falcor::logWarning(std::string("buffer success ? = ") + std::to_string(succeed));
-
-
+	*/
+	pRenderContext->pushGraphicsVars(mpVars);
 	mpGfxState->setFbo(outputFbo4);
 	mpMainPassShader->execute(pRenderContext, mpGfxState);
 }

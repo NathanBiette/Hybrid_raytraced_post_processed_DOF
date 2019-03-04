@@ -16,9 +16,123 @@ cbuffer cameraParametersCB
 {
 	float gOffset;
 	float gDistanceToFocalPlane;
+	float gTextureWidth;
+	float gTextureHeight;
 }
 
-Buffer<float> weights;
+// i : 0 -> 23 
+//kernel[i].x = cos(2.0f * PI* (float)i / 24.0f) / 2; //correction coc diameter -> radius
+//kernel[i].x = sin(2.0f * PI* (float)i / 24.0f) / 2;
+// i : 24 -> 39
+//kernel[i].x = cos(2.0f * PI* (float)i / 16.0f) / 3;
+//kernel[i].x = sin(2.0f * PI* (float)i / 16.0f) / 3;
+// i : 40 -> 47
+//kernel[i].x = cos(2.0f * PI* (float)i / 8.0f) / 6;
+//kernel[i].x = sin(2.0f * PI* (float)i / 8.0f) / 6;
+
+
+float kernelX[48] = { 
+0.5f,
+0.482962913f,
+0.433012701f,
+0.35355339f,
+0.250000000f,
+0.129409522f,
+0.0f,
+-0.129409522f,
+-0.24999999f,
+-0.353553390f,
+-0.433012701f,
+-0.48296291f,
+-0.5f,
+-0.482962913f,
+-0.43301270f,
+-0.353553390f,
+-0.25000000f,
+-0.129409522f,
+0.0f,
+0.129409522f,
+0.250000000f,
+0.35355339f,
+0.43301270f,
+0.482962913f,
+0.33333333f,
+0.307959844f,
+0.235702260f,
+0.12756114f,
+0.0f,
+-0.127561144f,
+-0.23570226f,
+-0.307959844f,
+-0.33333333f,
+-0.307959844f,
+-0.23570226f,
+-0.127561144f,
+0.0f,
+0.127561144f,
+0.235702260f,
+0.30795984f,
+0.166666666f,
+0.117851130f,
+0.0f,
+-0.11785113f,
+-0.166666666f,
+-0.117851130f,
+0.0f,
+0.117851130f};
+
+float kernelY[48] = {
+0.0f,
+0.129409522f,
+0.249999999f,
+0.353553390f,
+0.433012701f,
+0.482962913f,
+0.5f,
+0.482962913f,
+0.433012701f,
+0.353553390f,
+0.249999999f,
+0.129409522f,
+0.0f,
+-0.12940952f,
+-0.24999999f,
+-0.35355339f,
+-0.43301270f,
+-0.48296291f,
+-0.5f,
+-0.48296291f,
+-0.43301270f,
+-0.35355339f,
+-0.25000000f,
+-0.12940952f,
+0.0f,
+0.127561144f,
+0.23570226f,
+0.307959844f,
+0.333333333f,
+0.307959844f,
+0.235702260f,
+0.127561144f,
+0.0f,
+-0.12756114f,
+-0.23570226f,
+-0.30795984f,
+-0.33333333f,
+-0.30795984f,
+-0.23570226f,
+-0.12756114f,
+0.0f,
+0.1178511f,
+0.166666666f,
+0.117851130f,
+0.0f,
+-0.11785113f,
+-0.166666666f,
+-0.117851130f
+}
+
+//Buffer<float> weights;
 
 PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 {
@@ -30,27 +144,9 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	float4 foreground = gPresortBuffer[pixelPos].g * float4(gHalfResFrameColor[pixelPos].rgb, 1.0);
 	float4 background = gPresortBuffer[pixelPos].b * float4(gHalfResFrameColor[pixelPos].rgb, 1.0);
 	float coc = gDilate[uint2(pixelPos.x / 10, pixelPos.y / 10)].r; //max coc in tile
-
-	float2 kernel[49];
-	/*
-	for (int i = 0; i < 49 - 1; i++) {
-		if (i < 24) {
-			kernel[i].x = cos(2.0f * PI* (float)i / 24.0f) * 
-				
-				((float)pixelPos.x * 2.0f + coc / 12.0f * ) / gTextureWidth;
-			kernel[i].y = (float)pixelPos.y * 2.0f + coc / 12.0f * sin(2.0f * PI* (float)i / 9.0f) / gTextureHeight;
-		}
-		else if (i < 39) {
-		
-		}
-		else {
-		
-		}
-		
-	}
-	*/
 	
-	if (weights[0]==1.2f) {
+	/*
+	if (weights[0] == 1.2f) {
 		MainPassBufOut.halfResFarField = float4(1.0f, 0.0f, 1.0f, 1.0f);
 	}
 	else if(weights[0] == 0.0f) {
@@ -59,8 +155,8 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	else{
 		MainPassBufOut.halfResFarField = float4(1.0f, 1.0f, 1.0f, 1.0f);
 	}
-
-	/*
+	*/
+	
 
 	//#case 1:  where foreground and background will contribute to far field only
 
@@ -73,7 +169,14 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 			float4 background = float4(0.0, 0.0, 0.0, 1.0);
 
 			//here let’s suppose that the circular filter has the same size as the max_coc in tile 
-			float sampleCoc = fetch(gPresortBuffer, frag.x + kernel[i].x, frag.y + kernel[i].y).r;
+
+			//float sampleCoc = fetch(gPresortBuffer, frag.x + kernel[i].x, frag.y + kernel[i].y).r;
+			
+			float2 tCoord = float2( ((float)pos.x * 2.0f + coc  * kernelX[i]) / gTextureWidth, ((float)pos.y * 2.0f + coc * kernelY[i]) / gTextureHeight);
+			gPresortBuffer.SampleLevel(gSampler, tCoord, 0); //sample level 0 of texture using texcoord
+
+
+
 			kernel_diameter = tile_buffer_2[frag.x][frag.y].g;
 			if (i < 24) {
 				spreadCmp = sampleCoc < kernel_diameter ? 0.0f : 1.0f;
