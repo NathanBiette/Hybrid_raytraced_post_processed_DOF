@@ -169,25 +169,22 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 			float4 background = float4(0.0, 0.0, 0.0, 1.0);
 
 			//here let’s suppose that the circular filter has the same size as the max_coc in tile 
-
-			//float sampleCoc = fetch(gPresortBuffer, frag.x + kernel[i].x, frag.y + kernel[i].y).r;
-			
 			float2 tCoord = float2( ((float)pos.x * 2.0f + coc  * kernelX[i]) / gTextureWidth, ((float)pos.y * 2.0f + coc * kernelY[i]) / gTextureHeight);
-			gPresortBuffer.SampleLevel(gSampler, tCoord, 0); //sample level 0 of texture using texcoord
+			float3 presortSample = gPresortBuffer.SampleLevel(gSampler, tCoord, 0).rgb; //sample level 0 of texture using texcoord
 
-
-
-			kernel_diameter = tile_buffer_2[frag.x][frag.y].g;
+			float spreadCmp;
 			if (i < 24) {
-				spreadCmp = sampleCoc < kernel_diameter ? 0.0f : 1.0f;
+				spreadCmp = presortSample.r < coc ? 0.0f : 1.0f;
 			}else if(i < 39) {
-				spreadCmp = sampleCoc < 2.0f * kernel_diameter / 3.0f ? 0.0f : 1.0f;
+				spreadCmp = presortSample.r < 2.0f * coc / 3.0f ? 0.0f : 1.0f;
 			}
 			else {
-				spreadCmp = sampleCoc < kernel_diameter / 3.0f ? 0.0f :1.0f;
+				spreadCmp = presortSample.r < coc / 3.0f ? 0.0f :1.0f;
 			}
-			background += spreadCmp * gPresortBuffer[frag.x][frag.y].g * float4(gHalfResFrameColor[frag.x][frag.y].rgb, 1.0);
-			foreground += spreadCmp * gPresortBuffer[frag.x][frag.y].b * float4(gHalfResFrameColor[frag.x][frag.y].rgb, 1.0);
+			background += spreadCmp * presortSample.g * float4(gHalfResFrameColor.SampleLevel(gSampler, tCoord, 0).rgb, 1.0);
+			foreground += spreadCmp * presortSample.b * float4(gHalfResFrameColor.SampleLevel(gSampler, tCoord, 0).rgb, 1.0);
+			
+			// ------------------ LAST TIME 04.03.2019 => check lerp thing is correct ----------------------------------------------
 			far_field_buffer = float4(lerp(foreground.rgb, background.rgb, foreground.a), 1.0);
 			write(far_field_buffer, frag.x, frag.y, far_field_value);
 
