@@ -1,4 +1,4 @@
-/**********************************************************************************************************************
+﻿/**********************************************************************************************************************
 # Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification, are permitted provided that the
@@ -312,8 +312,9 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	pBuf[2] = 1.0f;
 	bool succeed = mpVars->setTypedBuffer("weights", pBuf);
 	Falcor::logWarning(std::string("buffer success ? = ") + std::to_string(succeed));
-	*/
 	pRenderContext->pushGraphicsVars(mpVars);
+	*/
+	
 	mpGfxState->setFbo(outputFbo4);
 	mpMainPassShader->execute(pRenderContext, mpGfxState);
 }
