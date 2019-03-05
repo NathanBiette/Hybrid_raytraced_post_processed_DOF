@@ -139,7 +139,6 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	PS_OUTPUT MainPassBufOut;
 	uint2 pixelPos = (uint2)pos.xy;
 
-
 	//initialization
 	float4 foreground = gPresortBuffer[pixelPos].g * float4(gHalfResFrameColor[pixelPos].rgb, 1.0);
 	float4 background = gPresortBuffer[pixelPos].b * float4(gHalfResFrameColor[pixelPos].rgb, 1.0);
@@ -157,82 +156,82 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	}
 	*/
 	
-
+	float4 farFieldValue = float4(0.0, 0.0, 0.0, 1.0);
+	float4 nearFieldValue = float4(0.0, 0.0, 0.0, 1.0);
+	float4 foreground = float4(0.0, 0.0, 0.0, 1.0);
+	float4 background = float4(0.0, 0.0, 0.0, 1.0);
+	
 	//#case 1:  where foreground and background will contribute to far field only
+	if (gHalfResZBuffer[uint2(pixelPos.x / 10, pixelPos.y / 10)].r > gDistanceToFocalPlane - gOffset) {
 
-	if (tile_buffer_2[uint2(pixelPos.x / 10, pixelPos.y / 10)].r > gDistanceToFocalPlane - gOffset) {
-		for (int i = 0; i < 49 - 1; i++) {
-
-			float4 far_field_value = float4(0.0, 0.0, 0.0, 1.0);
-			float4 near_field_value = float4(0.0, 0.0, 0.0, 1.0);
-			float4 foreground = float4(0.0, 0.0, 0.0, 1.0);
-			float4 background = float4(0.0, 0.0, 0.0, 1.0);
+		//Iterate over the samples 
+		for (int i = 0; i < 48; i++) {
 
 			//here let’s suppose that the circular filter has the same size as the max_coc in tile 
-			float2 tCoord = float2( ((float)pos.x * 2.0f + coc  * kernelX[i]) / gTextureWidth, ((float)pos.y * 2.0f + coc * kernelY[i]) / gTextureHeight);
-			float3 presortSample = gPresortBuffer.SampleLevel(gSampler, tCoord, 0).rgb; //sample level 0 of texture using texcoord
+			float2 sampleCoord = float2( ((float)pos.x * 2.0f + coc * kernelX[i]) / gTextureWidth, ((float)pos.y * 2.0f + coc * kernelY[i]) / gTextureHeight);
+			float3 presortSample = gPresortBuffer.SampleLevel(gSampler, sampleCoord, 0).rgb; //sample level 0 of texture using texcoord
 
+			//TODO can be improved here with careful multiplication (euclidian division by 24)
 			float spreadCmp;
 			if (i < 24) {
 				spreadCmp = presortSample.r < coc ? 0.0f : 1.0f;
-			}else if(i < 39) {
+			} else if (i < 39) {
+				spreadCmp = presortSample.r < 2.0f * coc / 3.0f ? 0.0f : 1.0f;
+			} else {
+				spreadCmp = presortSample.r < coc / 3.0f ? 0.0f : 1.0f;
+			}
+
+			background += spreadCmp * presortSample.g * float4(gHalfResFrameColor.SampleLevel(gSampler, sampleCoord, 0).rgb, 1.0);
+			foreground += spreadCmp * presortSample.b * float4(gHalfResFrameColor.SampleLevel(gSampler, sampleCoord, 0).rgb, 1.0);
+
+		}
+
+		farFieldValue = float4(lerp(foreground.rgb, background.rgb, float3(foreground.a)), 1.0);
+		MainPassBufOut.halfResFarField = farFieldValue;
+		MainPassBufOut.halfResNearField = float4(0.0f);
+
+	} else {
+		//#case 2 : where foreground-background gradient may overlap focus plane -> sort contribution to fields on sample basis
+		
+		//Iterate over the samples 
+		for (int i = 0; i < 48; i++) {
+
+			//here let’s suppose that the circular filter has the same size as the max_coc in tile 
+			float2 sampleCoord = float2(((float)pos.x * 2.0f + coc * kernelX[i]) / gTextureWidth, ((float)pos.y * 2.0f + coc * kernelY[i]) / gTextureHeight);
+			float3 presortSample = gPresortBuffer.SampleLevel(gSampler, sampleCoord, 0).rgb; //sample level 0 of texture using texcoord
+
+			//TODO can be improved here with careful multiplication (euclidian division by 24)
+			float spreadCmp;
+			if (i < 24) {
+				spreadCmp = presortSample.r < coc ? 0.0f : 1.0f;
+			}
+			else if (i < 39) {
 				spreadCmp = presortSample.r < 2.0f * coc / 3.0f ? 0.0f : 1.0f;
 			}
 			else {
-				spreadCmp = presortSample.r < coc / 3.0f ? 0.0f :1.0f;
-			}
-			background += spreadCmp * presortSample.g * float4(gHalfResFrameColor.SampleLevel(gSampler, tCoord, 0).rgb, 1.0);
-			foreground += spreadCmp * presortSample.b * float4(gHalfResFrameColor.SampleLevel(gSampler, tCoord, 0).rgb, 1.0);
-			
-			// ------------------ LAST TIME 04.03.2019 => check lerp thing is correct ----------------------------------------------
-			far_field_buffer = float4(lerp(foreground.rgb, background.rgb, foreground.a), 1.0);
-			write(far_field_buffer, frag.x, frag.y, far_field_value);
-
-
-
-			//#case 2 : where foreground-background gradient may overlap focus plane -> sort contribution to fields on sample basis
-
-		}
-	else {
-		//size-1 to remove central sample of index size-1
-		for (int i = 0; i < kernel_size - 1; i++) {
-
-			float4 far_field_value = float4(0.0, 0.0, 0.0, 1.0);
-			float4 near_field_value = float4(0.0, 0.0, 0.0, 1.0);
-			float4 foreground = float4(0.0, 0.0, 0.0, 1.0);
-			float4 background = float4(0.0, 0.0, 0.0, 1.0);
-
-			//here let’s suppose that the circular filter has the same size as the max_coc in tile 
-			sampleCoc = fetch(gPresortBuffer, frag.x + kernel[i].x, frag.y + kernel[i].y).r;
-			kernel_diameter = tile_buffer_2[frag.x][frag.y].g;
-			if (i < 24) {
-				spreadCmp = sampleCoc < kernel_diameter ? 0.0 : 1.0;
-			}elsif(i < 39) {
-				spreadCmp = sampleCoc < 2 * kernel_diameter / 3 ? 0.0 : 1.0;
-			}
-			else {
-				spreadCmp = sampleCoc < kernel_diameter / 3 ? 0.0 : 1.0;
+				spreadCmp = presortSample.r < coc / 3.0f ? 0.0f : 1.0f;
 			}
 
-			sample_Z = fetch(half_res_Z_buffer, frag.x + kernel[i].x, frag.y + kernel[i].y);
+			// Get the Z value of sample to know its contribution to far / near color
+			float sampleZ = gHalfResZBuffer.SampleLevel(gSampler, sampleCoord, 0).r;
 
 			//first case, sample belongs to far field
-			if (sample_z > focus_plane_Z - offset) {
-				far_field_value.rgb += spreadCmp * gPresortBuffer[frag.x][frag.y].g * gHalfResFrameColor[frag.x][frag.y].rgb;
+			if (sampleZ > gDistanceToFocalPlane - gOffset) {
+				farFieldValue.rgb += spreadCmp * presortSample.g * gHalfResFrameColor.SampleLevel(gSampler, sampleCoord, 0).rgb;
 
-				//second case, sample belongs to near field
-			}
-			else {
-				background += spreadCmp * gPresortBuffer[frag.x][frag.y].g * float4(gHalfResFrameColor[frag.x][frag.y].rgb, 1.0);
-				foreground += spreadCmp * gPresortBuffer[frag.x][frag.y].b * float4(gHalfResFrameColor[frag.x][frag.y].rgb, 1.0);
-
+			//second case, sample belongs to near field
+			} else {
+				background += spreadCmp * presortSample.g * float4(gHalfResFrameColor.SampleLevel(gSampler, sampleCoord, 0).rgb, 1.0);
+				foreground += spreadCmp * presortSample.b * float4(gHalfResFrameColor.SampleLevel(gSampler, sampleCoord, 0).rgb, 1.0);
 			}
 		}
-		write(far_field_buffer, frag.x, frag.y, far_field_value);
-		near_field_buffer = float4(lerp(foreground.rgb, background.rgb, foreground.a), 1.0);
-		write(near_field_buffer, frag.x, frag.y, near_field_value);
+
+		// Far field buffer
+		MainPassBufOut.halfResFarField = farFieldValue;
+		// Near field value and buffer
+		nearFieldValue = float4(lerp(foreground.rgb, background.rgb, float3(foreground.a)), 1.0);
+		MainPassBufOut.halfResNearField = nearFieldValue;
 	}
-	*/
 
 	return MainPassBufOut;
 }
