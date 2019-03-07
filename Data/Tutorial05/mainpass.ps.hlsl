@@ -144,21 +144,9 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	float4 foreground = gPresortBuffer[pixelPos].g * float4(gHalfResFrameColor[pixelPos].rgb, 1.0);
 	float4 background = gPresortBuffer[pixelPos].b * float4(gHalfResFrameColor[pixelPos].rgb, 1.0);
 	float coc = gDilate[uint2(pixelPos.x / 10, pixelPos.y / 10)].r; //max coc in tile
-	
-	/*
-	if (weights[0] == 1.2f) {
-		MainPassBufOut.halfResFarField = float4(1.0f, 0.0f, 1.0f, 1.0f);
-	}
-	else if(weights[0] == 0.0f) {
-		MainPassBufOut.halfResFarField = float4(1.0f, 0.0f, 0.0f, 1.0f);
-	}
-	else{
-		MainPassBufOut.halfResFarField = float4(1.0f, 1.0f, 1.0f, 1.0f);
-	}
-	*/
-	
-	float4 farFieldValue = float4(0.0f, 0.0f, 0.0f, 1.0f);
-	float4 nearFieldValue = float4(0.0f, 0.0f, 0.0f, 1.0f);
+	float4 farFieldValue;
+	float4 nearFieldValue;
+
 	float3 sampleColor = float3(0.0f, 0.0f, 0.0f);
 	float spreadCmp = 0.0f;
 
@@ -169,8 +157,10 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	//#case 1:  where foreground and background will contribute to far field only
 	if (gDilate[uint2(pixelPos.x / 10, pixelPos.y / 10)].g > gDistanceToFocalPlane - gOffset) {
 
-		float4 foreground = gPresortBuffer[pixelPos].g * float4(gHalfResFrameColor[pixelPos].rgb, 1.0);
-		float4 background = gPresortBuffer[pixelPos].b * float4(gHalfResFrameColor[pixelPos].rgb, 1.0);
+		//float4 foreground = gPresortBuffer[pixelPos].g * float4(gHalfResFrameColor[pixelPos].rgb, 1.0);
+		//float4 background = gPresortBuffer[pixelPos].b * float4(gHalfResFrameColor[pixelPos].rgb, 1.0);
+		sampleColor = gHalfResFrameColor[pixelPos].rgb;
+		float count = 0.0f;
 
 		//Iterate over the samples 
 		for (int i = 0; i < 48; i++) {
@@ -189,29 +179,35 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 				spreadCmp = presortSample.r < coc / 3.0f ? 0.0f : 1.0f;
 			}
 
-			sampleColor = gHalfResFrameColor.SampleLevel(gSampler, sampleCoord, 0).rgb;
+			sampleColor += spreadCmp * gHalfResFrameColor.SampleLevel(gSampler, sampleCoord, 0).rgb;
+			count += spreadCmp;
 
-			background += spreadCmp * presortSample.g * float4(sampleColor.rgb, 1.0f);
-			foreground += spreadCmp * presortSample.b * float4(sampleColor.rgb, 1.0f);
-			//background += spreadCmp * float4(sampleColor.rgb, 1.0f);
-			//foreground += spreadCmp * float4(sampleColor.rgb, 1.0f);
+			//background += spreadCmp * presortSample.g * float4(sampleColor.rgb, 1.0f);
+			//foreground += spreadCmp * presortSample.b * float4(sampleColor.rgb, 1.0f);
+			//background += presortSample.g * float4(sampleColor.rgb, 1.0f);
+			//foreground += presortSample.b * float4(sampleColor.rgb, 1.0f);
 
 		}
 
-		farFieldValue = float4(lerp(background.rgb, foreground.rgb, float3(foreground.a)), 1.0);
-		//nearFieldValue = float4(0.0f);
+		//farFieldValue = float4(lerp(background.rgb, foreground.rgb, float3(foreground.a)), 1.0);
+		farFieldValue = float4(sampleColor / count,  1.0);
+		nearFieldValue = float4(0.0f);
 		//MainPassBufOut.halfResNearField = float4(1.0f, 0.0f, 1.0f, 0.0f);
 
-		if (coc > 10.0f) {
+		/*
+		if (coc > 50.0f) {
 			nearFieldValue = float4(1.0f);
 		}
-		else if (coc > 5.0f) {
+		else if (coc > 30.0f) {
 			nearFieldValue = float4(0.75f);
 		}
-		else if (coc > 1.0f) {
+		else if (coc > 10.0f) {
 			nearFieldValue = float4(0.5f);
 		}
-
+		else {
+			nearFieldValue = float4(0.0f);
+		}
+		*/
 
 
 

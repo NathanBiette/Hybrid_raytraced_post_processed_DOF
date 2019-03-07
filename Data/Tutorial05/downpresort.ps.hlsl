@@ -1,4 +1,5 @@
 static const float PI = 3.14159265f;
+static const float Z_RANGE = 0.03f;
 
 Texture2D<float4>   gDilate;
 Texture2D<float4>   gZBuffer;
@@ -76,8 +77,15 @@ float2 DepthCmp2(float pixelDepth, float closestDepthInTile, float depthRange) {
 
 float SampleAlpha(float cocRadius, float singlePixelRadius) {
 	//samplecoc is radius of coc in pixels
-	return min(1.0f / (PI * cocRadius * cocRadius), 1.0f / (PI * singlePixelRadius * singlePixelRadius));
-	//return min(1.0f, (singlePixelRadius * singlePixelRadius) / (cocRadius * cocRadius));
+	//return min(1.0f / (PI * cocRadius * cocRadius), 1.0f / (PI * singlePixelRadius * singlePixelRadius));
+	return min(1.0f, (singlePixelRadius * singlePixelRadius) / (cocRadius * cocRadius));
+}
+
+/*
+Gaussian function 
+*/
+float Gaussian(float mean, float standardDeviation, float value) {
+	return exp(-0.5f * (value - mean) * (value - mean) / (standardDeviation * standardDeviation)) / (2.506628f * standardDeviation);
 }
 
 //supposing RGB color spaces use the ITU-R BT.709 primaries
@@ -114,6 +122,8 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	float sumZ = Z; //the Z from the downsample part, of target output
 	float3 sampleColor[9];
 	float4 Z4;
+
+	float4 tempColor = halfResColor / 10.0f;
 	
 	for (int i = 0; i < 9; i++) {
 		//find sample location while scaling filter width with coc size 
@@ -122,22 +132,29 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 		// to get location of the sample : take the center of current pixel, get the rigth angle according to index of sample on unit circle and get the rigth distance to center pixel
 		// the distance to pixel is the COC (diameter) size / 12 (coc /(2*6) 2 is to get the radius, 6 is to fill in the space between main filter samples (3 circles of sample, 49taps)) 
 		sampleLocation.x = ((float)pixelPos.x * 2.0f + coc / 12.0f * cos(2.0f * PI* (float)i / 9.0f)) / gTextureWidth;
-		sampleLocation.y = (float)pixelPos.y * 2.0f + coc / 12.0f * sin(2.0f * PI* (float)i / 9.0f) / gTextureHeight;
+		sampleLocation.y = ((float)pixelPos.y * 2.0f + coc / 12.0f * sin(2.0f * PI* (float)i / 9.0f)) / gTextureHeight;
 
 		//Here as we are supposedly sampling the Z buffer with the border to 0 sampler, if we sample outside, the min Z = 0 and sample doesn't count anyway
 		Z4 = gZBuffer.Gather(gSampler, sampleLocation);
 		sampleZ[i] = min(min(min(Z4.r, Z4.g), Z4.b), Z4.a);
 		sampleColor[i] = gFrameColor.SampleLevel(gSampler, sampleLocation, 0).rgb;
-		sumZ += sampleZ[i];
 	}
 
-	float3 sumColor = halfResColor.rgb * Z / (sumZ * (1 + (1 - gStrengthTweak) * Luma(halfResColor.rgb)));
+	//float3 sumColor = halfResColor.rgb * Z / (sumZ * (1 + (1 - gStrengthTweak) * Luma(halfResColor.rgb)));
+	//float3 sumColor = halfResColor.rgb / 10.0f ;
+	float3 sumColor = float3(0.0f);
+	float sumWeigth = 0.0f;
+	float weigth = 0.0f;
 
 	for (int i = 0; i < 9; i++) {
-		sumColor += sampleColor[i] * sampleZ[i] / (sumZ * (1 + (1 - gStrengthTweak) * Luma(sampleColor[i])));
+		//sumColor += sampleColor[i] * sampleZ[i] / (sumZ * (1 + (1 - gStrengthTweak) * Luma(sampleColor[i])));
+		//sumColor += sampleColor[i]  / 10.0f;
+		weigth = abs(Z - sampleZ[i]) * Gaussian(Z, Z_RANGE, abs(Z - sampleZ[i]));
+		sumColor += sampleColor[i] * weigth;
+		sumWeigth += weigth;
 	}
 	
-	DownPresortBufOut.halfResColor = float4(sumColor.r, sumColor.g, sumColor.b, 1.0f);
+	DownPresortBufOut.halfResColor = float4(sumColor / sumWeigth, 1.0f);
 	DownPresortBufOut.halfResZBuffer = float4(Z, 0.0f, 0.0f, 0.0f);
 	
 	//########################## debug zone ############################################################

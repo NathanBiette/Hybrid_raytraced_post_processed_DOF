@@ -232,7 +232,7 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	downPresortShaderVars["cameraParametersCB"]["gDistanceToFocalPlane"] = mDistFocalPlane;
 	downPresortShaderVars["cameraParametersCB"]["gAperture"] = mAperture;
 	downPresortShaderVars["cameraParametersCB"]["gSensorWidth"] = mSensorWidth;
-	downPresortShaderVars["cameraParametersCB"]["gDepthRange"] = 1.0f;			//const of depth range here
+	downPresortShaderVars["cameraParametersCB"]["gDepthRange"] = 100.0f;			//const of depth range here
 	
 	downPresortShaderVars["cameraParametersCB"]["gSinglePixelRadius"] = 0.7071f;	//const of pixel radius
 	
