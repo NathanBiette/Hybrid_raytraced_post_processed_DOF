@@ -77,6 +77,7 @@ float2 DepthCmp2(float pixelDepth, float closestDepthInTile, float depthRange) {
 float SampleAlpha(float cocRadius, float singlePixelRadius) {
 	//samplecoc is radius of coc in pixels
 	return min(1.0f / (PI * cocRadius * cocRadius), 1.0f / (PI * singlePixelRadius * singlePixelRadius));
+	//return min(1.0f, (singlePixelRadius * singlePixelRadius) / (cocRadius * cocRadius));
 }
 
 //supposing RGB color spaces use the ITU-R BT.709 primaries
@@ -103,7 +104,7 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	float coc = COC(Z);
 	float2 depthCmp2 = DepthCmp2(Z, gDilate[uint2(pixelPos.x / 10, pixelPos.y / 10)].g, gDepthRange);
 	float sampleAlpha = SampleAlpha(coc / 2.0f, gSinglePixelRadius);
-	
+	//store COC of pixel, alpha background, alpha foreground 
 	DownPresortBufOut.presortBuffer = float4(coc, sampleAlpha * depthCmp2.x, sampleAlpha * depthCmp2.y, 0.0f);
 	
 	//####################### downsample pass #######################################################

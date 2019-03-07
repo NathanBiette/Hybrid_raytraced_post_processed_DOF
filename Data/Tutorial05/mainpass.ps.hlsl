@@ -169,8 +169,8 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	//#case 1:  where foreground and background will contribute to far field only
 	if (gDilate[uint2(pixelPos.x / 10, pixelPos.y / 10)].g > gDistanceToFocalPlane - gOffset) {
 
-		float4 foreground = float4(0.0f, 0.0f, 0.0f, 1.0f);
-		float4 background = float4(0.0f, 0.0f, 0.0f, 1.0f);
+		float4 foreground = gPresortBuffer[pixelPos].g * float4(gHalfResFrameColor[pixelPos].rgb, 1.0);
+		float4 background = gPresortBuffer[pixelPos].b * float4(gHalfResFrameColor[pixelPos].rgb, 1.0);
 
 		//Iterate over the samples 
 		for (int i = 0; i < 48; i++) {
@@ -193,18 +193,33 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 
 			background += spreadCmp * presortSample.g * float4(sampleColor.rgb, 1.0f);
 			foreground += spreadCmp * presortSample.b * float4(sampleColor.rgb, 1.0f);
+			//background += spreadCmp * float4(sampleColor.rgb, 1.0f);
+			//foreground += spreadCmp * float4(sampleColor.rgb, 1.0f);
 
 		}
 
-		farFieldValue = float4(lerp(foreground.rgb, background.rgb, float3(foreground.a)), 1.0);
-		MainPassBufOut.halfResFarField = farFieldValue;
-		MainPassBufOut.halfResNearField = float4(0.0f);
+		farFieldValue = float4(lerp(background.rgb, foreground.rgb, float3(foreground.a)), 1.0);
+		//nearFieldValue = float4(0.0f);
+		//MainPassBufOut.halfResNearField = float4(1.0f, 0.0f, 1.0f, 0.0f);
+
+		if (coc > 10.0f) {
+			nearFieldValue = float4(1.0f);
+		}
+		else if (coc > 5.0f) {
+			nearFieldValue = float4(0.75f);
+		}
+		else if (coc > 1.0f) {
+			nearFieldValue = float4(0.5f);
+		}
+
+
+
 
 	} else {
 		//#case 2 : where foreground-background gradient may overlap focus plane -> sort contribution to fields on sample basis
 		
-		float4 foreground = float4(0.0f, 0.0f, 0.0f, 1.0f);
-		float4 background = float4(0.0f, 0.0f, 0.0f, 1.0f);
+		float4 foreground = gPresortBuffer[pixelPos].g * float4(gHalfResFrameColor[pixelPos].rgb, 1.0);
+		float4 background = gPresortBuffer[pixelPos].b * float4(gHalfResFrameColor[pixelPos].rgb, 1.0);
 
 		//Iterate over the samples 
 		for (int i = 0; i < 48; i++) {
@@ -240,11 +255,20 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 		}
 
 		// Far field buffer
-		MainPassBufOut.halfResFarField = farFieldValue;
 		// Near field value and buffer
-		nearFieldValue = float4(lerp(foreground.rgb, background.rgb, float3(foreground.a)), 1.0);
-		MainPassBufOut.halfResNearField = nearFieldValue;
+
+
+		//nearFieldValue = float4(foreground.rgb + (background.rgb - foreground.rgb) * foreground.a, 1.0);
+
+		nearFieldValue = float4(lerp(background.rgb, foreground.rgb, float3(foreground.a)), 1.0);
+		//nearFieldValue = float4(foreground.rgb, 1.0);
+		
+		//MainPassBufOut.halfResNearField = float4(0.0f, 0.0f, 1.0f, 0.0f);
 	}
+
+	MainPassBufOut.halfResFarField = farFieldValue;
+	MainPassBufOut.halfResNearField = nearFieldValue;
+
 
 	return MainPassBufOut;
 }
