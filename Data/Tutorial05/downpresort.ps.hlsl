@@ -152,8 +152,10 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 		sumColor += sampleColor[i] * weigth;
 		sumWeigth += weigth;
 	}
+
+	halfResColor.rgb = halfResColor.rgb / 2.0f + sumColor / (sumWeigth * 2.0f);
 	
-	DownPresortBufOut.halfResColor = float4(sumColor / sumWeigth, 1.0f);
+	DownPresortBufOut.halfResColor = float4(halfResColor.rgb, 1.0f);
 	DownPresortBufOut.halfResZBuffer = float4(Z, 0.0f, 0.0f, 0.0f);
 	
 	//#################################################################################################
