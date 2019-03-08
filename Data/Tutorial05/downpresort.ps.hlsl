@@ -68,8 +68,8 @@ Returns the alpha of a splatted pixel according to coc size
 */
 float SampleAlpha(float cocRadius, float singlePixelRadius) {
 	//samplecoc is radius of coc in pixels
-	//return min(1.0f / (PI * cocRadius * cocRadius), 1.0f / (PI * singlePixelRadius * singlePixelRadius));
-	return min(1.0f, (singlePixelRadius * singlePixelRadius) / (cocRadius * cocRadius));
+	return min(1.0f / (PI * cocRadius * cocRadius), 1.0f / (PI * singlePixelRadius * singlePixelRadius));
+	//return min(1.0f, (singlePixelRadius * singlePixelRadius) / (cocRadius * cocRadius));
 }
 
 /*
