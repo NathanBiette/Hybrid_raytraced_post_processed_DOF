@@ -162,6 +162,7 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	float3 sampleColor = float3(0.0f, 0.0f, 0.0f);
 	float spreadCmp;
 	float alphaSpreadCmpSum;
+	float sampleCount;
 	
 	/*#case 1:  where foreground and background will contribute to far field only*/
 
@@ -210,6 +211,7 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 		foreground = gPresortBuffer[pixelPos].b * float4(gHalfResFrameColor[pixelPos].rgb, 1.0);
 		background = gPresortBuffer[pixelPos].g * float4(gHalfResFrameColor[pixelPos].rgb, 1.0);
 		alphaSpreadCmpSum = SampleAlpha(gPresortBuffer[pixelPos].r / 2.0f, gSinglePixelRadius);
+		sampleCount = 1.0;
 
 		//Iterate over the samples 
 		for (int i = 0; i < 48; i++) {
@@ -241,11 +243,14 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 				foreground += spreadCmp * presortSample.b * float4(gHalfResFrameColor.SampleLevel(gSampler, sampleCoord, 0).rgb, 1.0);
 				background += spreadCmp * presortSample.g * float4(gHalfResFrameColor.SampleLevel(gSampler, sampleCoord, 0).rgb, 1.0);
 				alphaSpreadCmpSum += spreadCmp * SampleAlpha(presortSample.r / 2.0f, gSinglePixelRadius);
+				sampleCount += spreadCmp;
 			}
 		}
 
 		farFieldValue = float4(farFieldValue.rgb / farFieldValue.a, 1.0f);
-		nearFieldValue = float4((foreground.rgb + background.rgb) / alphaSpreadCmpSum, 1.0);
+		float alpha = saturate(2.0f * foreground.a / (sampleCount * SampleAlpha(coc / 2.0f, gSinglePixelRadius) ) );
+		//nearFieldValue = float4((foreground.rgb + background.rgb) / alphaSpreadCmpSum, alpha);
+		nearFieldValue = float4(foreground.rgb / foreground.a, alpha);
 	}
 
 	MainPassBufOut.halfResFarField = farFieldValue;

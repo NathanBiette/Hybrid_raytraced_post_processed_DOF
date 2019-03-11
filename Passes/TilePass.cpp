@@ -45,23 +45,6 @@ bool TilePass::initialize(RenderContext::SharedPtr pRenderContext, ResourceManag
 	// Stash our resource manager; ask for the texture the developer asked us to accumulate
 	mpResManager = pResManager;
 
-	/* HERE get the rigth texture setup in FBO */
-	
-	//########### pasted code ###############
-
-	// We need a framebuffer to attach to our graphics pipe state (when running our full-screen pass).  We can ask our
-	//    resource manager to create one for us, with specified width, height, and format and one color buffer.
-	//mpInternalFbo = ResourceManager::createFbo(width, height, ResourceFormat::RGBA32Float);
-	//mpGfxState->setFbo(mpInternalFbo);
-
-	//#######################################
-
-	//Get size of full screen image
-	/*
-	//Viewport isn't even initialized just yet ....
-	int32_t width = (int32_t)mpResManager->getWidth();
-	int32_t height = (int32_t)mpResManager->getHeight();
-	*/
 	int32_t width = 1920;
 	int32_t height = 1080;
 
@@ -70,10 +53,7 @@ bool TilePass::initialize(RenderContext::SharedPtr pRenderContext, ResourceManag
 
 	mpResManager->requestTextureResource("Tiles", ResourceFormat::RG16Float,(Falcor::Resource::BindFlags)112U, width / 20 , height / 20); //specifying size seems to work well
 	mpResManager->requestTextureResource("Dilate", ResourceFormat::RG16Float,(Falcor::Resource::BindFlags)112U, width / 20 , height / 20); 
-	//mpResManager->requestTextureResource("Half_res_color", ResourceFormat::RGB16Float,(Falcor::Resource::BindFlags)112U, width / 2 , height / 2);
 
-	//mptest = Texture::create2D(width / 20, height / 20, ResourceFormat::RG16Float);
-	
 	mpResManager->requestTextureResource("Half_res_color", ResourceFormat::RGBA16Float,(Falcor::Resource::BindFlags)112U, width / 2 , height / 2);
 	mpResManager->requestTextureResource("Presort_buffer", ResourceFormat::RGBA16Float,(Falcor::Resource::BindFlags)112U, width / 2 , height / 2);
 	mpResManager->requestTextureResource("Half_res_z_buffer", ResourceFormat::R32Float, (Falcor::Resource::BindFlags)112U, width / 2, height / 2);
@@ -81,10 +61,8 @@ bool TilePass::initialize(RenderContext::SharedPtr pRenderContext, ResourceManag
 	mpResManager->requestTextureResource("Half_res_far_field", ResourceFormat::RGBA16Float, (Falcor::Resource::BindFlags)112U, width / 2, height / 2);
 	mpResManager->requestTextureResource("Half_res_near_field", ResourceFormat::RGBA16Float, (Falcor::Resource::BindFlags)112U, width / 2, height / 2);
 	
-	//mpResManager->requestTextureResource("Tiles", ResourceFormat::R32Float);
-	//mpResManager->requestTextureResource("Tiles");
+
 	mpResManager->requestTextureResource("Z-Buffer2", ResourceFormat::D24UnormS8, ResourceManager::kDepthBufferFlags);
-	//mpResManager->requestTextureResource("Z-Buffer");
 
 	// Create our graphics state and an tiling shader
 	mpGfxState = GraphicsState::create();
@@ -92,42 +70,6 @@ bool TilePass::initialize(RenderContext::SharedPtr pRenderContext, ResourceManag
 	mpDilateShader = FullscreenLaunch::create(kDilateShader);
 	mpDownPresortShader = FullscreenLaunch::create(kDownPresortShader);
 	mpMainPassShader = FullscreenLaunch::create(kMainPassShader);
-
-	//NOT WORKING !!!
-	/*
-	ProgramReflection::SharedConstPtr pReflector = mpMainPassShader->getProgramReflection();
-	mpVars = GraphicsVars::create(pReflector);
-	TypedBuffer<float>::SharedPtr pBuf = TypedBuffer<float>::create((uint32_t)3, Resource::BindFlags::ShaderResource);
-	pBuf[0] = (float)1.2f;
-	pBuf[1] = (float)1.0f;
-	pBuf[2] = (float)1.0f;
-	bool succeed = mpVars->setTypedBuffer("weights", pBuf);
-	Falcor::logWarning(std::string("buffer success ? = ") + std::to_string(succeed));
-	Falcor::logWarning(std::string("pbuffer 0 ? = ") + std::to_string(pBuf[0]));
-	Falcor::logWarning(std::string("pbuffer 1 ? = ") + std::to_string(pBuf[1]));
-	Falcor::logWarning(std::string("pbuffer 2 ? = ") + std::to_string(pBuf[2]));
-	*/
-	
-	//setup the kernel for main pass
-	
-	/*
-	std::vector<float> weights(center + 1);
-
-	for (int i = 0; i < 49 - 1; i++) {
-		if (i < 24) {
-			kernel[i].x = cos(2.0f * PI* (float)i / 24.0f) *
-
-				((float)pixelPos.x * 2.0f + coc / 12.0f *) / gTextureWidth;
-			kernel[i].y = (float)pixelPos.y * 2.0f + coc / 12.0f * sin(2.0f * PI* (float)i / 9.0f) / gTextureHeight;
-		}
-		else if (i < 39) {
-
-		}
-		else {
-
-		}
-
-	}*/
 
 	return true;
 }
@@ -185,14 +127,6 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	shaderVars["cameraParametersCB"]["gTextureWidth"] = (float)mpResManager->getWidth();
 
 
-	//shaderVars["gTileBuffer"] = outputTexture;
-
-	/*
-	shaderVars["PerFrameCB"]["gAccumCount"] = mAccumCount++;
-	shaderVars["gLastFrame"] = mpLastFrame;
-	shaderVars["gCurFrame"] = inputTexture;
-	*/
-
 	// ------------- my stuff ---------------
 	mpGfxState->setFbo(outputFbo);
 	//---------------------------------------
@@ -232,7 +166,7 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	downPresortShaderVars["cameraParametersCB"]["gDistanceToFocalPlane"] = mDistFocalPlane;
 	downPresortShaderVars["cameraParametersCB"]["gAperture"] = mAperture;
 	downPresortShaderVars["cameraParametersCB"]["gSensorWidth"] = mSensorWidth;
-	downPresortShaderVars["cameraParametersCB"]["gDepthRange"] = 100.0f;			//const of depth range here
+	downPresortShaderVars["cameraParametersCB"]["gDepthRange"] = 0.1f;			//const of depth range here
 	
 	downPresortShaderVars["cameraParametersCB"]["gSinglePixelRadius"] = 0.7071f;	//const of pixel radius
 	
@@ -298,23 +232,6 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	pointSamplerBindLocation = pReflectorMainPass->getDefaultParameterBlock()->getResourceBinding("gSampler");
 	ParameterBlock* pDefaultBlockPointSampler = mainPassShaderVars->getVars()->getDefaultBlock().get();
 	pDefaultBlockPointSampler->setSampler(pointSamplerBindLocation, 0, mpPointSampler);
-
-	
-
-	/*
-	
-	std::vector<float> test(3);
-	test[0] = 1.2f;
-	//mainPassShaderVars["cameraParametersCB"]["gkernel"] = test; //FAKE VALUE , NEED COMPUTATION HERE
-	GraphicsVars::SharedPtr mpVars = GraphicsVars::create(pReflectorMainPass);
-	TypedBuffer<float>::SharedPtr pBuf = TypedBuffer<float>::create(3, Resource::BindFlags::ShaderResource);
-	pBuf[0] = 1.2f;
-	pBuf[1] = 1.0f;
-	pBuf[2] = 1.0f;
-	bool succeed = mpVars->setTypedBuffer("weights", pBuf);
-	Falcor::logWarning(std::string("buffer success ? = ") + std::to_string(succeed));
-	pRenderContext->pushGraphicsVars(mpVars);
-	*/
 	
 	mpGfxState->setFbo(outputFbo4);
 	mpMainPassShader->execute(pRenderContext, mpGfxState);
