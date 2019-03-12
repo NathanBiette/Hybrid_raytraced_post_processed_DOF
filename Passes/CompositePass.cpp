@@ -21,6 +21,7 @@ namespace {
 	// Where is our shader located?
 	const char *kCompositeShader = "Tutorial05\\composite.ps.hlsl";
 	const char *kSobelShader = "Tutorial05\\sobelpass.ps.hlsl";
+	const char *kEdgeDilateShader = "Tutorial05\\edgedilate.ps.hlsl";
 };
 
 // Define our constructor methods
@@ -47,11 +48,13 @@ bool CompositePass::initialize(RenderContext::SharedPtr pRenderContext, Resource
 
 	mpResManager->requestTextureResource("Final_image");
 	mpResManager->requestTextureResource("Edge_buffer", ResourceFormat::R16Float, (Falcor::Resource::BindFlags)112U, width / 10, height / 10);
+	mpResManager->requestTextureResource("Edge_dilate_buffer", ResourceFormat::R16Float, (Falcor::Resource::BindFlags)112U, width / 10, height / 10);
 
 	// Create our graphics state and an tiling shader
 	mpGfxState = GraphicsState::create();
 	mpCompositeShader = FullscreenLaunch::create(kCompositeShader);
 	mpSobelShader = FullscreenLaunch::create(kSobelShader);
+	mpEdgeDilateShader = FullscreenLaunch::create(kEdgeDilateShader);
 
 	return true;
 }
@@ -119,6 +122,19 @@ void CompositePass::execute(RenderContext::SharedPtr pRenderContext)
 	auto sobelShaderVars = mpSobelShader->getVars();
 	
 	sobelShaderVars["gHalfResZBuffer"] = halfResZBuffer;
+
+	mpGfxState->setFbo(outputSobelFbo);
+	mpSobelShader->execute(pRenderContext, mpGfxState);
+
+	/*################################# dilate pass #############################################*/
+	Texture::SharedPtr edgeBuffer = mpResManager->getTexture("Edge_buffer");
+	if (!edgeBuffer) return;
+	Fbo::SharedPtr outputDilateFbo = mpResManager->createManagedFbo({ "Edge_dilate_buffer" }, "Z-Buffer2");
+	if (!outputDilateFbo) return;
+	pRenderContext->clearFbo(outputDilateFbo.get(), vec4(0.0f, 0.0f, 0.0f, 1.0f), 1.0f, 0);
+
+	auto edgeDilateShaderVars = mpEdgeDilateShader->getVars();
+	edgeDilateShaderVars["gEdgeBuffer"] = edgeBuffer;
 
 	mpGfxState->setFbo(outputSobelFbo);
 	mpSobelShader->execute(pRenderContext, mpGfxState);

@@ -33,11 +33,6 @@ struct PS_OUTPUT
 	float4 edges    : SV_Target0;
 };
 
-cbuffer cameraParametersCB
-{
-
-}
-
 PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 {
 	PS_OUTPUT edgesBufOut;
