@@ -82,7 +82,9 @@ void CompositePass::execute(RenderContext::SharedPtr pRenderContext)
 	compositeShaderVars["gNearField"] = nearFieldBuffer;
 	compositeShaderVars["gFullResColor"] = fullResBuffer;
 	compositeShaderVars["cameraParametersCB"]["gFarFocusZoneRange"] = mFarLimitFocusZone - mDistFocalPlane;
+	compositeShaderVars["cameraParametersCB"]["gNearFocusZoneRange"] = mDistFocalPlane - mNearLimitFocusZone;
 	compositeShaderVars["cameraParametersCB"]["gFarFieldFocusLimit"] = mFarLimitFocusZone;
+	compositeShaderVars["cameraParametersCB"]["gFarFieldFocusLimit"] = mNearLimitFocusZone;
 	compositeShaderVars["cameraParametersCB"]["gTextureWidth"] = (float)mpResManager->getWidth();
 	compositeShaderVars["cameraParametersCB"]["gTextureHeight"] = (float)mpResManager->getHeight();
 

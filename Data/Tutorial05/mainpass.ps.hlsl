@@ -164,9 +164,13 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	float alphaSpreadCmpSum;
 	float sampleCount;
 	
+
+
+
+
 	/*#case 1:  where foreground and background will contribute to far field only*/
 
-	if (gDilate[uint2(pixelPos.x / 10, pixelPos.y / 10)].g > gDistanceToFocalPlane - gOffset) {
+	//if (gDilate[uint2(pixelPos.x / 10, pixelPos.y / 10)].g > gDistanceToFocalPlane - gOffset) {
 
 		foreground = gPresortBuffer[pixelPos].b * float4(gHalfResFrameColor[pixelPos].rgb, 1.0);
 		background = gPresortBuffer[pixelPos].g * float4(gHalfResFrameColor[pixelPos].rgb, 1.0);
@@ -205,6 +209,7 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	/*
 	#case 2 : where foreground-background gradient may overlap focus plane -> sort contribution to fields on sample basis
 	*/
+	/*
 	} else {
 		
 		farFieldValue = float4(0.0f, 0.0f, 0.0f , 0.0f);
@@ -260,8 +265,10 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 		nearFieldValue = float4(foreground.rgb / foreground.a, alpha);
 	}
 
+	*/
 	MainPassBufOut.halfResFarField = farFieldValue;
 	MainPassBufOut.halfResNearField = nearFieldValue;
+
 
 
 	return MainPassBufOut;
