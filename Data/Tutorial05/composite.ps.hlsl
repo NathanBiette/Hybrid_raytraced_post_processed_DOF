@@ -1,6 +1,9 @@
+static const float BLENDING_TWEAK = 1.0f;
+
 Texture2D<float4>   gZBuffer;
 Texture2D<float4>   gFarField;
 Texture2D<float4>   gNearField;
+Texture2D<float4>   gFullResColor;
 
 SamplerState gSampler;
 
@@ -12,14 +15,19 @@ struct PS_OUTPUT
 
 cbuffer cameraParametersCB
 {
-	//float gOffset;
-	//float gDistanceToFocalPlane;
+	float gFarFocusZoneRange;
+	float gFarFieldFocusLimit;
 	float gTextureWidth;
 	float gTextureHeight;
 	//float gSinglePixelRadius;
 }
 
-
+/*
+Based on
+Implementing Median Filters in XC4000E FPGAs
+Jhon L. Smith
+http://users.utcluj.ro/~baruch/media/resources/Image/xl23_16.pdf
+*/
 float4 Median9(vector<float,4>[9] samples) {
 	float4 values[30];
 	values[29] = min(samples[7], samples[8]);
@@ -59,14 +67,41 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 {
 	PS_OUTPUT compositePassBufOut;
 	float4 farFieldSamples[9];
+	float4 nearFieldSamples[9];
 	for (int i = 0; i < 3; i++) {
 		for (int j = 0; j < 3; j++) {
 			farFieldSamples[i*3 + j] = gFarField.SampleLevel(gSampler, float2( (pos.x + 2.0f * ((float)i - 1.0f))/gTextureWidth, (pos.y + 2.0f * ((float)j - 1.0f))/gTextureHeight), 0);
+			nearFieldSamples[i*3 + j] = gNearField.SampleLevel(gSampler, float2( (pos.x + 2.0f * ((float)i - 1.0f))/gTextureWidth, (pos.y + 2.0f * ((float)j - 1.0f))/gTextureHeight), 0);
 		}
 	}
+	float4 farFieldColor = Median9(farFieldSamples);
+	float4 nearFieldColor = Median9(nearFieldSamples);
+	float4 focusColor = gFullResColor.SampleLevel(gSampler, texC, 0);
+	float Z = gZBuffer.SampleLevel(gSampler, texC, 0).r;
+	float blendFactor = saturate((Z - gFarFieldFocusLimit) / (BLENDING_TWEAK * gFarFocusZoneRange));
 
-	float4 medianPixel = Median9(farFieldSamples);
-	compositePassBufOut.finalImage = medianPixel;
+	//if (Z > gFarFieldFocusLimit) {
+		compositePassBufOut.finalImage = float4(blendFactor * farFieldColor.rgb + (1.0f - blendFactor) * focusColor.rgb, 1.0f);
+	//}
+	//else {
+	//	compositePassBufOut.finalImage = float4( focusColor.rgb, 1.0f);
+	//}
+	
+
+	
+
+	/*
+	if (Z > gFarFieldFocusLimit) {
+		compositePassBufOut.finalImage = float4(0.5f, 0.0f, 0.0f, 1.0f);
+	}
+	else if (Z > 1.0f) {
+		compositePassBufOut.finalImage = float4(0.0f, 0.5f, 0.0f, 1.0f);
+	}
+	else {
+		compositePassBufOut.finalImage = float4(0.0f, 0.0f, 0.5f, 1.0f);
+	}
+	*/
+
 	return compositePassBufOut;
 }
 

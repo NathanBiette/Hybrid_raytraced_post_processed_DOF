@@ -37,6 +37,10 @@ protected:
 	float mAperture = mFocalLength / mFNumber;
 	//full frame camera = 36x24 mm 
 	float mSensorWidth = 0.036f;
+	float mImageWidth = 1920.0f;
+	//near and far limits of focus zone
+	float mNearLimitFocusZone = mAperture * mFocalLength * mDistFocalPlane / (mAperture * mFocalLength + (float)sqrt(2) * (mDistFocalPlane - mFocalLength) * mSensorWidth / mImageWidth);
+	float mFarLimitFocusZone = mAperture * mFocalLength * mDistFocalPlane / (mAperture * mFocalLength - (float)sqrt(2) * (mDistFocalPlane - mFocalLength) * mSensorWidth / mImageWidth);
 
 	// Implementation of SimpleRenderPass interface
 	bool initialize(RenderContext::SharedPtr pRenderContext, ResourceManager::SharedPtr pResManager) override;
@@ -61,4 +65,5 @@ protected:
 	Scene::SharedPtr            mpScene;                ///< A pointer to the scene we're rendering
 	GraphicsVars::SharedPtr		mpVars;
 	Texture::SharedPtr mptest;
+
 };

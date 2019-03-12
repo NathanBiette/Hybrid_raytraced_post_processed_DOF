@@ -207,7 +207,7 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	*/
 	} else {
 		
-		farFieldValue = float4(0.0f);
+		farFieldValue = float4(0.0f, 0.0f, 0.0f , 0.0f);
 		foreground = gPresortBuffer[pixelPos].b * float4(gHalfResFrameColor[pixelPos].rgb, 1.0);
 		background = gPresortBuffer[pixelPos].g * float4(gHalfResFrameColor[pixelPos].rgb, 1.0);
 		alphaSpreadCmpSum = SampleAlpha(gPresortBuffer[pixelPos].r / 2.0f, gSinglePixelRadius);
@@ -246,8 +246,15 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 				sampleCount += spreadCmp;
 			}
 		}
+		//here the fragments are already pretty much in focus so we cannot normalize, sum of weights probably 0
+		if (farFieldValue.a < 0.001f) {
+			farFieldValue = float4(gHalfResFrameColor[pixelPos].rgb, 1.0);
+		}
+		else {	//here we can still get some background fragments
+			farFieldValue = float4(farFieldValue.rgb / farFieldValue.a, 1.0f);
+		}
+		
 
-		farFieldValue = float4(farFieldValue.rgb / farFieldValue.a, 1.0f);
 		float alpha = saturate(2.0f * foreground.a / (sampleCount * SampleAlpha(coc / 2.0f, gSinglePixelRadius) ) );
 		//nearFieldValue = float4((foreground.rgb + background.rgb) / alphaSpreadCmpSum, alpha);
 		nearFieldValue = float4(foreground.rgb / foreground.a, alpha);
