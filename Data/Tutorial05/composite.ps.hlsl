@@ -1,4 +1,6 @@
 Texture2D<float4>   gZBuffer;
+Texture2D<float4>   gFarField;
+Texture2D<float4>   gNearField;
 
 SamplerState gSampler;
 
@@ -7,16 +9,16 @@ struct PS_OUTPUT
 	float4 finalImage    : SV_Target0;
 };
 
-/*
+
 cbuffer cameraParametersCB
 {
-	float gOffset;
-	float gDistanceToFocalPlane;
+	//float gOffset;
+	//float gDistanceToFocalPlane;
 	float gTextureWidth;
 	float gTextureHeight;
-	float gSinglePixelRadius;
+	//float gSinglePixelRadius;
 }
-*/
+
 
 float4 Median9(vector<float,4>[9] samples) {
 	float4 values[30];
@@ -57,20 +59,14 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 {
 	PS_OUTPUT compositePassBufOut;
 	float4 farFieldSamples[9];
-	
-	/*
-	farFieldSamples[0] = float4(0.0f);
-	farFieldSamples[1] = float4(1.0f);
-	farFieldSamples[2] = float4(2.0f);
-	farFieldSamples[3] = float4(3.0f, 4.5f, 6.0f, 1.0f);
-	farFieldSamples[4] = float4(4.0f);
-	farFieldSamples[5] = float4(5.0f);
-	farFieldSamples[6] = float4(6.0f);
-	farFieldSamples[7] = float4(7.0f);
-	farFieldSamples[8] = float4(8.0f);
-	*/
-	float4 medianPixel = Median9(samples);
-	
+	for (int i = 0; i < 3; i++) {
+		for (int j = 0; j < 3; j++) {
+			farFieldSamples[i*3 + j] = gFarField.SampleLevel(gSampler, float2( (pos.x + 2.0f * ((float)i - 1.0f))/gTextureWidth, (pos.y + 2.0f * ((float)j - 1.0f))/gTextureHeight), 0);
+		}
+	}
+
+	float4 medianPixel = Median9(farFieldSamples);
+	compositePassBufOut.finalImage = medianPixel;
 	return compositePassBufOut;
 }
 

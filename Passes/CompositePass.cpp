@@ -64,6 +64,10 @@ void CompositePass::execute(RenderContext::SharedPtr pRenderContext)
 {
 	Texture::SharedPtr ZBuffer = mpResManager->getTexture("ZBuffer");
 	if (!ZBuffer) return;
+	Texture::SharedPtr farFieldBuffer = mpResManager->getTexture("Half_res_far_field");
+	if (!farFieldBuffer) return;
+	Texture::SharedPtr nearFieldBuffer = mpResManager->getTexture("Half_res_near_field");
+	if (!nearFieldBuffer) return;
 	Fbo::SharedPtr outputFbo = mpResManager->createManagedFbo({ "Final_image" }, "Z-Buffer2");
 	if (!outputFbo) return;
 
@@ -72,6 +76,10 @@ void CompositePass::execute(RenderContext::SharedPtr pRenderContext)
 	auto compositeShaderVars = mpCompositeShader->getVars();
 	
 	compositeShaderVars["gZBuffer"] = ZBuffer;
+	compositeShaderVars["gFarField"] = farFieldBuffer;
+	compositeShaderVars["gNearField"] = nearFieldBuffer;
+	compositeShaderVars["cameraParametersCB"]["gTextureWidth"] = (float)mpResManager->getWidth();
+	compositeShaderVars["cameraParametersCB"]["gTextureHeight"] = (float)mpResManager->getHeight();
 
 	mpGfxState->setFbo(outputFbo);
 	mpCompositeShader->execute(pRenderContext, mpGfxState);
