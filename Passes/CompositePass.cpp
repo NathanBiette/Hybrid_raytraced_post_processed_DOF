@@ -20,6 +20,7 @@
 namespace {
 	// Where is our shader located?
 	const char *kCompositeShader = "Tutorial05\\composite.ps.hlsl";
+	const char *kSobelShader = "Tutorial05\\sobelpass.ps.hlsl";
 };
 
 // Define our constructor methods
@@ -45,10 +46,12 @@ bool CompositePass::initialize(RenderContext::SharedPtr pRenderContext, Resource
 	int32_t height = 1080;
 
 	mpResManager->requestTextureResource("Final_image");
+	mpResManager->requestTextureResource("Edge_buffer", ResourceFormat::R16Float, (Falcor::Resource::BindFlags)112U, width / 10, height / 10);
 
 	// Create our graphics state and an tiling shader
 	mpGfxState = GraphicsState::create();
 	mpCompositeShader = FullscreenLaunch::create(kCompositeShader);
+	mpSobelShader = FullscreenLaunch::create(kSobelShader);
 
 	return true;
 }
@@ -106,5 +109,17 @@ void CompositePass::execute(RenderContext::SharedPtr pRenderContext)
 	ParameterBlock* pDefaultBlock = compositeShaderVars->getVars()->getDefaultBlock().get();
 	pDefaultBlock->setSampler(samplerBindLocation, 0, mpSampler);
 
+	/*################################# sobel filtering pass #############################################*/
+	Texture::SharedPtr halfResZBuffer = mpResManager->getTexture("Half_res_z_buffer");
+	if (!ZBuffer) return;
+	Fbo::SharedPtr outputSobelFbo = mpResManager->createManagedFbo({ "Edge_buffer" }, "Z-Buffer2");
+	if (!outputSobelFbo) return;
+	pRenderContext->clearFbo(outputSobelFbo.get(), vec4(0.0f, 0.0f, 0.0f, 1.0f), 1.0f, 0);
+	
+	auto sobelShaderVars = mpSobelShader->getVars();
+	
+	sobelShaderVars["gHalfResZBuffer"] = halfResZBuffer;
 
+	mpGfxState->setFbo(outputSobelFbo);
+	mpSobelShader->execute(pRenderContext, mpGfxState);
 }
