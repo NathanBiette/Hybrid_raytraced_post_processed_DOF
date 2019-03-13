@@ -27,7 +27,7 @@ __import Shading;                      // Shading functions, etc
 // Include utility functions for random numbers & alpha testing
 #include "thinLensUtils.hlsli"
 
-Texture2D<float4> gEdgeIntensity;
+Texture2D<float4> gRaytraceMask;
 // The output textures, where we store our G-buffer results.  See bindings in C++ code.
 RWTexture2D<float4> gColor;
 
@@ -58,7 +58,7 @@ cbuffer RayGenCB
 [shader("raygeneration")]
 void GBufferRayGen()
 {
-	//if (gEdgeIntensity[uint2(DispatchRaysIndex().x / 5, DispatchRaysIndex().y / 5)].r > 0.01f ) {
+	if (gRaytraceMask[uint2(DispatchRaysIndex().x / 10, DispatchRaysIndex().y / 10)].r > 0.01f ) {
 
 		// Get our pixel's position on the screen
 		uint2 launchIndex = DispatchRaysIndex();
@@ -112,7 +112,7 @@ void GBufferRayGen()
 			accumColor += rayData.colorValue;
 		}
 		gColor[launchIndex] = accumColor / gNumRays;
-	//}
+	}
 
 
 	

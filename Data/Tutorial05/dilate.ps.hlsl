@@ -4,10 +4,18 @@ cbuffer textureParametersCB
 {
 	int width;
 	int height;
+	float distToFocusPlane;
 }
 
-float4 main(float2 texC : TEXCOORD, float4 pos : SV_Position) : SV_TARGET0
+struct PS_OUTPUT
 {
+	float4 dilatedTiles    : SV_Target0;
+	float4 raytraceMask    : SV_Target1;
+};
+
+PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
+{
+	PS_OUTPUT DilatePassOutput;
 	uint2 pixelPos = (uint2)pos.xy;
 
 	float max_coc = 0.0f;
@@ -35,6 +43,7 @@ float4 main(float2 texC : TEXCOORD, float4 pos : SV_Position) : SV_TARGET0
 			}
 		}
 	}
-
-	return float4(max_coc, nearest_Z, 0.0f, 1.0f);
+	DilatePassOutput.dilatedTiles = float4(max_coc, nearest_Z, 0.0f, 1.0f);
+	DilatePassOutput.raytraceMask = nearest_Z < distToFocusPlane ? 1.0f : 0.0f;
+	return DilatePassOutput;
 }

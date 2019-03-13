@@ -75,7 +75,8 @@ void RaytracePass::execute(RenderContext::SharedPtr pRenderContext)
 	if (!mpRays || !mpRays->readyToRender()) return;
 
 	Texture::SharedPtr farFieldBuffer = mpResManager->getTexture("Half_res_far_field");
-	Texture::SharedPtr edgeDilateBuffer = mpResManager->getTexture("Edge_dilate_buffer");
+	//Texture::SharedPtr edgeDilateBuffer = mpResManager->getTexture("Edge_dilate_buffer");
+	Texture::SharedPtr raytraceMask = mpResManager->getTexture("RaytraceMask");
 
 	// Pass our background color down to our miss shader
 	auto missVars = mpRays->getMissVars(0);
@@ -89,7 +90,7 @@ void RaytracePass::execute(RenderContext::SharedPtr pRenderContext)
 
 	// Pass our camera parameters to the ray generation shader
 	auto rayGenVars = mpRays->getRayGenVars();
-	rayGenVars["gEdgeIntensity"] = edgeDilateBuffer;
+	rayGenVars["gRaytraceMask"] = raytraceMask;
 	rayGenVars["gColor"] = farFieldBuffer;
 	rayGenVars["RayGenCB"]["gLensRadius"] = mAperture / 2.0f;
 	rayGenVars["RayGenCB"]["gFocalLen"] = mFocalLength;

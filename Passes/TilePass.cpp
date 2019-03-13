@@ -53,6 +53,7 @@ bool TilePass::initialize(RenderContext::SharedPtr pRenderContext, ResourceManag
 
 	mpResManager->requestTextureResource("Tiles", ResourceFormat::RG16Float,(Falcor::Resource::BindFlags)112U, width / 20 , height / 20); //specifying size seems to work well
 	mpResManager->requestTextureResource("Dilate", ResourceFormat::RG16Float,(Falcor::Resource::BindFlags)112U, width / 20 , height / 20); 
+	mpResManager->requestTextureResource("RaytraceMask", ResourceFormat::R16Float,(Falcor::Resource::BindFlags)112U, width / 20 , height / 20); 
 
 	mpResManager->requestTextureResource("Half_res_color", ResourceFormat::RGBA16Float,(Falcor::Resource::BindFlags)112U, width / 2 , height / 2);
 	mpResManager->requestTextureResource("Presort_buffer", ResourceFormat::RGBA16Float,(Falcor::Resource::BindFlags)112U, width / 2 , height / 2);
@@ -134,7 +135,7 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	mpTilingShader->execute(pRenderContext, mpGfxState);
 
 	//########################  Second pass -> dilate pass  ########################################
-	Fbo::SharedPtr outputFbo2 = mpResManager->createManagedFbo({ "Dilate" }, "Z-Buffer2");
+	Fbo::SharedPtr outputFbo2 = mpResManager->createManagedFbo({ "Dilate", "RaytraceMask" }, "Z-Buffer2");
 	if (!outputFbo) return;
 	pRenderContext->clearFbo(outputFbo2.get(), vec4(0.0f, 0.0f, 0.0f, 1.0f), 1.0f, 0);
 
@@ -145,6 +146,7 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	dilateShaderVars["gTiles"] = tiles;
 	dilateShaderVars["textureParametersCB"]["width"] = (int)mpResManager->getWidth() / 20;
 	dilateShaderVars["textureParametersCB"]["height"] = (int)mpResManager->getHeight() / 20;
+	dilateShaderVars["textureParametersCB"]["distToFocusPlane"] = mDistFocalPlane;
 	mpGfxState->setFbo(outputFbo2);
 	mpDilateShader->execute(pRenderContext, mpGfxState);
 

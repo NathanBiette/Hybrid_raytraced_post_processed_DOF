@@ -35,27 +35,32 @@ struct GBuffer
 // Our main entry point for the g-buffer fragment shader.
 GBuffer main(VertexOut vsOut, uint primID : SV_PrimitiveID, float4 pos : SV_Position)
 {
-	// This is a Falcor built-in that extracts data suitable for shading routines
-	//     (see ShaderCommon.slang for the shading data structure and routines)
-	ShadingData hitPt = prepareShadingData(vsOut, gMaterial, gCamera.posW);
-
-	// Dump out our G buffer channels
+	float depth = 2 * gFar * gNear / (gFar + gNear - (gFar - gNear) * (2 * pos.z - 1.0f));
 	GBuffer gBufOut;
-	gBufOut.color = float4(0.0, 0.0, 0.0, hitPt.opacity);
+	//TODO put nice values here from code
+	if (depth > 1.0f) {
+		// This is a Falcor built-in that extracts data suitable for shading routines
+		//     (see ShaderCommon.slang for the shading data structure and routines)
+		ShadingData hitPt = prepareShadingData(vsOut, gMaterial, gCamera.posW);
+
+		// Dump out our G buffer channels
+		
+		gBufOut.color = float4(0.0, 0.0, 0.0, hitPt.opacity);
 
 
-	// Get the shading resulting from all lights (sum diffuse and specular term of each lights contribution)
-	for (int lightIndex = 0; lightIndex < gLightsCount; lightIndex++)
-	{
-		ShadingResult sr = evalMaterial(hitPt, gLights[lightIndex], 1.0);	//for now just don't put any shadows !!!
-		gBufOut.color.rgb += sr.color.rgb;
+		// Get the shading resulting from all lights (sum diffuse and specular term of each lights contribution)
+		for (int lightIndex = 0; lightIndex < gLightsCount; lightIndex++)
+		{
+			ShadingResult sr = evalMaterial(hitPt, gLights[lightIndex], 1.0);	//for now just don't put any shadows !!!
+			gBufOut.color.rgb += sr.color.rgb;
+		}
+
+	}
+	else {
+		gBufOut.color = float4(0.0f, 0.0f, 0.0f, 1.0f);
 	}
 
-	//float4x4 worldMat = getWorldMat(vsOut);
-	//float4 posW = mul(pos, worldMat);
-	//gBufOut.depth = mul(posW, gCamera.viewProjMat).z;		//gCamera comes from shaderCommon injection, we get the pixel fragment in clip space here with view projection matrix applied to world pos
-	gBufOut.depth = 2 * gFar * gNear / (gFar + gNear - (gFar - gNear) * (2 * pos.z - 1.0f));
-
+	gBufOut.depth = depth;
 	return gBufOut;
 }
 
