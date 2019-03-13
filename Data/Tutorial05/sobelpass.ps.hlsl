@@ -1,3 +1,5 @@
+static const float EDGE_THRESHOLD = 0.5f;
+
 Texture2D<float4>   gHalfResZBuffer;
 
 cbuffer cameraParametersCB
@@ -54,7 +56,8 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 		}
 	}
 
-	float edge = minZ < gDistanceToFocalPlane ? abs(sumX) + abs(sumY) : 0.0f;
+	float edgeIntensity = minZ < gDistanceToFocalPlane ? abs(sumX) + abs(sumY) : 0.0f;
+	float edge = edgeIntensity > EDGE_THRESHOLD ? 1.0f : 0.0f;
 	edgesBufOut.edges = float4(edge, 0.0f, 0.0f, 1.0f);
 	return edgesBufOut;
 }

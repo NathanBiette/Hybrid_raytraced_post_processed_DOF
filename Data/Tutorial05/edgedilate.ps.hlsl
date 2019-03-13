@@ -1,3 +1,5 @@
+static const float EDGE_THRESHOLD = 0.5f;
+
 Texture2D<float4>   gEdgeBuffer;
 
 SamplerState gSampler;
@@ -45,7 +47,8 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 			float2 coord = float2(10.0f * (pos.x + kernelX[i] * 2.0f) / gTextureWidth, 10.0f * (pos.y + kernelY[i] * 2.0f) / gTextureHeight);
 			edgeMax = max(edgeMax, gEdgeBuffer.SampleLevel(gSampler, coord, 0).r);
 		}
-	edgesDilatedBufOut.edgesDilated = float4(edgeMax, 0.0f, 0.0f, 1.0f);
+	float edgeIntensity = edgeMax > EDGE_THRESHOLD ? 1.0f : 0.0f;
+	edgesDilatedBufOut.edgesDilated = float4(edgeIntensity, 0.0f, 0.0f, 1.0f);
 
 	return edgesDilatedBufOut;
 }
