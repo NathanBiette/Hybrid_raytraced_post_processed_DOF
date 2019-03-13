@@ -185,7 +185,6 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	ParameterBlockReflection::BindLocation samplerBindLocation;
 
 	samplerDesc.setFilterMode(Sampler::Filter::Linear, Sampler::Filter::Linear, Sampler::Filter::Point).setAddressingMode(Sampler::AddressMode::Border, Sampler::AddressMode::Border, Sampler::AddressMode::Border);
-	//samplerDesc.setFilterMode(Sampler::Filter::Linear, Sampler::Filter::Linear, Sampler::Filter::Point).setAddressingMode(Sampler::AddressMode::Border, Sampler::AddressMode::Border, Sampler::AddressMode::Border).setLodParams(0.0f, 0.0f, 0.0f);
 	mpSampler = Sampler::create(samplerDesc);
 	
 	pReflectorDownPresortPass = mpDownPresortShader->getProgramReflection();

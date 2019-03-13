@@ -122,11 +122,13 @@ void CompositePass::execute(RenderContext::SharedPtr pRenderContext)
 	auto sobelShaderVars = mpSobelShader->getVars();
 	
 	sobelShaderVars["gHalfResZBuffer"] = halfResZBuffer;
+	sobelShaderVars["cameraParametersCB"]["gDistanceToFocalPlane"] = mDistFocalPlane;
 
 	mpGfxState->setFbo(outputSobelFbo);
 	mpSobelShader->execute(pRenderContext, mpGfxState);
 
 	/*################################# dilate pass #############################################*/
+
 	Texture::SharedPtr edgeBuffer = mpResManager->getTexture("Edge_buffer");
 	if (!edgeBuffer) return;
 	Fbo::SharedPtr outputDilateFbo = mpResManager->createManagedFbo({ "Edge_dilate_buffer" }, "Z-Buffer2");
@@ -135,7 +137,24 @@ void CompositePass::execute(RenderContext::SharedPtr pRenderContext)
 
 	auto edgeDilateShaderVars = mpEdgeDilateShader->getVars();
 	edgeDilateShaderVars["gEdgeBuffer"] = edgeBuffer;
+	edgeDilateShaderVars["cameraParametersCB"]["gTextureWidth"] = (float)mpResManager->getWidth();
+	edgeDilateShaderVars["cameraParametersCB"]["gTextureHeight"] = (float)mpResManager->getHeight();
 
-	mpGfxState->setFbo(outputSobelFbo);
-	mpSobelShader->execute(pRenderContext, mpGfxState);
+	Sampler::SharedPtr mpLinearSampler;
+	Sampler::Desc linearsamplerDesc;
+	ProgramReflection::SharedConstPtr pReflectorEdgeDilatePass;
+	ParameterBlockReflection::BindLocation linearSamplerBindLocation;
+
+	linearsamplerDesc.setFilterMode(Sampler::Filter::Linear, Sampler::Filter::Linear, Sampler::Filter::Point).setAddressingMode(Sampler::AddressMode::Border, Sampler::AddressMode::Border, Sampler::AddressMode::Border);
+	mpLinearSampler = Sampler::create(linearsamplerDesc);
+
+	pReflectorEdgeDilatePass = mpEdgeDilateShader->getProgramReflection();
+	linearSamplerBindLocation = pReflectorEdgeDilatePass->getDefaultParameterBlock()->getResourceBinding("gSampler");
+	ParameterBlock* pDefaultLinearBlock = edgeDilateShaderVars->getVars()->getDefaultBlock().get();
+	pDefaultLinearBlock->setSampler(linearSamplerBindLocation, 0, mpLinearSampler);
+
+
+	mpGfxState->setFbo(outputDilateFbo);
+	mpEdgeDilateShader->execute(pRenderContext, mpGfxState);
+
 }
