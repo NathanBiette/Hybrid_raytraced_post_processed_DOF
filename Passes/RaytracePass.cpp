@@ -82,14 +82,15 @@ void RaytracePass::execute(RenderContext::SharedPtr pRenderContext)
 	missVars["MissShaderCB"]["gBgColor"] = mBgColor;
 
 	// Cycle through all geometry instances, bind our g-buffer outputs to the hit shaders for each instance
-	for (auto pVars : mpRays->getHitVars(0))
-	{
-		pVars["gColor"] = farFieldBuffer;
-	}
+	//for (auto pVars : mpRays->getHitVars(0))
+	//{
+	//	pVars["gColor"] = farFieldBuffer;
+	//}
 
 	// Pass our camera parameters to the ray generation shader
 	auto rayGenVars = mpRays->getRayGenVars();
 	rayGenVars["gEdgeIntensity"] = edgeDilateBuffer;
+	rayGenVars["gColor"] = farFieldBuffer;
 	rayGenVars["RayGenCB"]["gLensRadius"] = mAperture / 2.0f;
 	rayGenVars["RayGenCB"]["gFocalLen"] = mFocalLength;
 	rayGenVars["RayGenCB"]["gPlaneDist"] = mDistFocalPlane;
