@@ -75,6 +75,7 @@ void RaytracePass::execute(RenderContext::SharedPtr pRenderContext)
 	if (!mpRays || !mpRays->readyToRender()) return;
 
 	Texture::SharedPtr farFieldBuffer = mpResManager->getTexture("Half_res_far_field");
+	Texture::SharedPtr edgeDilateBuffer = mpResManager->getTexture("Edge_dilate_buffer");
 
 	// Pass our background color down to our miss shader
 	auto missVars = mpRays->getMissVars(0);
@@ -88,9 +89,12 @@ void RaytracePass::execute(RenderContext::SharedPtr pRenderContext)
 
 	// Pass our camera parameters to the ray generation shader
 	auto rayGenVars = mpRays->getRayGenVars();
+	rayGenVars["gEdgeIntensity"] = edgeDilateBuffer;
 	rayGenVars["RayGenCB"]["gLensRadius"] = mAperture / 2.0f;
 	rayGenVars["RayGenCB"]["gFocalLen"] = mFocalLength;
+	rayGenVars["RayGenCB"]["gPlaneDist"] = mDistFocalPlane;
 	rayGenVars["RayGenCB"]["gFrameCount"] = mFrameCount++;
+	rayGenVars["RayGenCB"]["gNumRays"] = mNumRays;
 
 	// Compute our jitter, either (0,0) as the center or some computed random/MSAA offset
 	float xOff = 0.0f, yOff = 0.0f;
