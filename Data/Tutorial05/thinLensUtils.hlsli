@@ -16,34 +16,40 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************************************/
 
-#include "Falcor.h"
-#include "../SharedUtils/RenderingPipeline.h"
-#include "../CommonPasses/SimpleGBufferPass.h"
-#include "Passes/AmbientOcclusionPass.h"
-#include "../CommonPasses/CopyToOutputPass.h"
-#include "Passes/TilePass.h"
-#include "Passes/CompositePass.h"
-#include "Passes/RaytracePass.h"
-
-
-int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR lpCmdLine, _In_ int nShowCmd)
+// Generates a seed for a random number generator from 2 inputs plus a backoff
+uint initRand(uint val0, uint val1, uint backoff = 16)
 {
-	// Create our rendering pipeline
-	RenderingPipeline *pipeline = new RenderingPipeline();
+	uint v0 = val0, v1 = val1, s0 = 0;
 
-	// Add passes into our pipeline
-	pipeline->setPass(0, SimpleGBufferPass::create());     // Create G-buffer (See Tutorial 3)
-	pipeline->setPass(1, TilePass::create());
-	pipeline->setPass(2, CompositePass::create());
-	pipeline->setPass(3, RaytracePass::create());
-	pipeline->setPass(4, CopyToOutputPass::create());
-	//pipeline->setPass(1, AmbientOcclusionPass::create());  // Create a pass to shoot ambient occlusion rays
- 
-	// Define a set of config / window parameters for our program
-    SampleConfig config;
-    config.windowDesc.title = "Tutorial 5:  Uses our rasterized G-buffer, then shoots one randomly chosen ambient occlusion ray per pixel";
-    config.windowDesc.resizableWindow = true;
+	[unroll]
+	for (uint n = 0; n < backoff; n++)
+	{
+		s0 += 0x9e3779b9;
+		v0 += ((v1 << 4) + 0xa341316c) ^ (v1 + s0) ^ ((v1 >> 5) + 0xc8013ea4);
+		v1 += ((v0 << 4) + 0xad90777d) ^ (v0 + s0) ^ ((v0 >> 5) + 0x7e95761e);
+	}
+	return v0;
+}
 
-	// Start our program!
-	RenderingPipeline::run(pipeline, config);
+// Takes our seed, updates it, and returns a pseudorandom float in [0..1]
+float nextRand(inout uint s)
+{
+	s = (1664525u * s + 1013904223u);
+	return float(s & 0x00FFFFFF) / float(0x01000000);
+}
+
+// This function tests if the alpha test fails, given the attributes of the current hit. 
+//   -> Can legally be called in a DXR any-hit shader or a DXR closest-hit shader, and 
+//      accesses Falcor helpers and data structures to extract and perform the alpha test.
+bool alphaTestFails(BuiltinIntersectionAttribs attribs)
+{
+	// Run a Falcor helper to extract the current hit point's geometric data
+	VertexOut  vsOut = getVertexAttributes(PrimitiveIndex(), attribs);
+
+	// Extracts the diffuse color from the material (the alpha component is opacity)
+	float4 baseColor = sampleTexture(gMaterial.resources.baseColor, gMaterial.resources.samplerState,
+		vsOut.texC, gMaterial.baseColor, EXTRACT_DIFFUSE_TYPE(gMaterial.flags));
+
+	// Test if this hit point fails a standard alpha test.  
+	return (baseColor.a < gMaterial.alphaThreshold);
 }

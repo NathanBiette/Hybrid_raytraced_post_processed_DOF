@@ -15,55 +15,61 @@
 # LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************************************/
+
+// This render pass updates the "RayTracedGBufferPass" from Tutorial #4 to include both camera 
+//      jitter (as in Tutorial #7) as well as a thin-lens camera approximation.  This allows the
+//      viewer to specify a focal length and f-number (which is a photographic method of setting
+//      the camera aperature size).  When combined with temporal accumulation, this allows 
+//      rendering of antialiased images with variable, user-controllable depth-of-field.
+
 #pragma once
 #include "../SharedUtils/RenderPass.h"
-#include "../SharedUtils/FullscreenLaunch.h"
+#include "../SharedUtils/RayLaunch.h"
+#include <random>
 
-class TilePass : public RenderPass, inherit_shared_from_this<RenderPass, TilePass>
+class RaytracePass : public RenderPass, inherit_shared_from_this<RenderPass, RaytracePass>
 {
 public:
-	using SharedPtr = std::shared_ptr<TilePass>;
+	using SharedPtr = std::shared_ptr<RaytracePass>;
+	using SharedConstPtr = std::shared_ptr<const RaytracePass>;
 
-	static SharedPtr create();
-	virtual ~TilePass() = default;
+	static SharedPtr create() { return SharedPtr(new RaytracePass()); }
+	virtual ~RaytracePass() = default;
 
 protected:
-	TilePass();
+	RaytracePass() : RenderPass("Thin Lens Camera") {}
 
-	//Thin lens parameters
+	// Implementation of RenderPass interface
+	bool initialize(RenderContext::SharedPtr pRenderContext, ResourceManager::SharedPtr pResManager) override;
+	void execute(RenderContext::SharedPtr pRenderContext) override;
+	void initScene(RenderContext::SharedPtr pRenderContext, Scene::SharedPtr pScene) override;
+
+	// The RenderPass class defines various methods we can override to specify this pass' properties. 
+	bool requiresScene() override { return true; }
+	bool usesRayTracing() override { return true; }
+
+	// Internal pass state
+	RayLaunch::SharedPtr        mpRays;            ///< Our wrapper around a DX Raytracing pass
+	RtScene::SharedPtr          mpScene;           ///< A copy of our scene
+
+												   //Thin lens parameters
 	float mFNumber = 2.0f;						// f number (typeless) = F/A (A = aperture)
 	float mFocalLength = 0.05f;					// here we take 50mm of focal length 
 	float mDistFocalPlane = 1.0f;				// What is our distance to focal plane (meaning where we focus on, 1m here)
 	float mAperture = mFocalLength / mFNumber;	//the diameter of the lens in thin lens model
-	//full frame camera = 36x24 mm 
+												//full frame camera = 36x24 mm 
 	float mSensorWidth = 0.036f;
 	float mImageWidth = 1920.0f;
 	//near and far limits of focus zone
 	float mNearLimitFocusZone = mAperture * mFocalLength * mDistFocalPlane / (mAperture * mFocalLength + (float)sqrt(2) * (mDistFocalPlane - mFocalLength) * mSensorWidth / mImageWidth);
 	float mFarLimitFocusZone = mAperture * mFocalLength * mDistFocalPlane / (mAperture * mFocalLength - (float)sqrt(2) * (mDistFocalPlane - mFocalLength) * mSensorWidth / mImageWidth);
+	  
+    // State for our camera jitter and random number generator (if we're doing randomized samples)
+	bool      mUseJitter = false;
+	bool      mUseRandomJitter = false;
+	std::uniform_real_distribution<float> mRngDist;     ///< We're going to want random #'s in [0...1] (the default distribution)
+	std::mt19937 mRng;                                  ///< Our random number generate.  Set up in initialize()
 
-	// Implementation of SimpleRenderPass interface
-	bool initialize(RenderContext::SharedPtr pRenderContext, ResourceManager::SharedPtr pResManager) override;
-	void execute(RenderContext::SharedPtr pRenderContext) override;
-	//void resize(uint32_t width, uint32_t height) override;
-	void initScene(RenderContext::SharedPtr pRenderContext, Scene::SharedPtr pScene);
-
-	// The RenderPass class defines various methods we can override to specify this pass' properties. 
-	bool appliesPostprocess() override { return true; }
-	bool requiresScene() override { return true; }
-
-	// Shaders
-	FullscreenLaunch::SharedPtr   mpTilingShader;
-	FullscreenLaunch::SharedPtr   mpDilateShader;
-	FullscreenLaunch::SharedPtr   mpDownPresortShader;
-	FullscreenLaunch::SharedPtr   mpMainPassShader;
-	// State for our accumulation shader
-	GraphicsState::SharedPtr      mpGfxState;
-	Texture::SharedPtr            mpLastFrame;
-	Fbo::SharedPtr                mpInternalFbo;
-	
-	Scene::SharedPtr            mpScene;                ///< A pointer to the scene we're rendering
-	GraphicsVars::SharedPtr		mpVars;
-	Texture::SharedPtr mptest;
-
+	vec3      mBgColor = vec3(0.5f, 0.5f, 1.0f);
+	uint32_t   mFrameCount = 0xdeadbeef;
 };
