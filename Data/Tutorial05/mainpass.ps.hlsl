@@ -187,13 +187,24 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 			float3 presortSample = gPresortBuffer.SampleLevel(gSampler, sampleCoord, 0).rgb;			//sample level 0 of texture using texcoord
 			
 			/*Get the spread comparison weight*/
-
+			/*
 			if (i < 24) {
 				spreadCmp = presortSample.r < coc ? 0.0f : 1.0f;
 			} else if (i < 39) {
 				spreadCmp = presortSample.r < 2.0f * coc / 3.0f ? 0.0f : 1.0f;
 			} else {
 				spreadCmp = presortSample.r < coc / 3.0f ? 0.0f : 1.0f;
+			}
+			*/
+
+			if (i < 24) {
+				spreadCmp = saturate(3.0f * presortSample.r / coc - 2.0f);
+			}
+			else if (i < 39) {
+				spreadCmp = saturate(3.0f * presortSample.r / coc - 1.0f);
+			}
+			else {
+				spreadCmp = saturate(3.0f * presortSample.r / coc);
 			}
 
 			foreground += spreadCmp * presortSample.b * float4(gHalfResFrameColor.SampleLevel(gSampler, sampleCoord, 0).rgb, 1.0f);

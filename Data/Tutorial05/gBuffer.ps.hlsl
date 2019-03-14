@@ -38,7 +38,7 @@ GBuffer main(VertexOut vsOut, uint primID : SV_PrimitiveID, float4 pos : SV_Posi
 	float depth = 2 * gFar * gNear / (gFar + gNear - (gFar - gNear) * (2 * pos.z - 1.0f));
 	GBuffer gBufOut;
 	//TODO put nice values here from code
-	if (depth > 1.0f) {
+	//if (depth > 1.0f) {
 		// This is a Falcor built-in that extracts data suitable for shading routines
 		//     (see ShaderCommon.slang for the shading data structure and routines)
 		ShadingData hitPt = prepareShadingData(vsOut, gMaterial, gCamera.posW);
@@ -55,10 +55,10 @@ GBuffer main(VertexOut vsOut, uint primID : SV_PrimitiveID, float4 pos : SV_Posi
 			gBufOut.color.rgb += sr.color.rgb;
 		}
 
-	}
-	else {
-		gBufOut.color = float4(0.0f, 0.0f, 0.0f, 1.0f);
-	}
+	//}
+	//else {
+	//	gBufOut.color = float4(0.0f, 0.0f, 0.0f, 1.0f);
+	//}
 
 	gBufOut.depth = depth;
 	return gBufOut;
