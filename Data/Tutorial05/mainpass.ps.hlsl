@@ -122,6 +122,7 @@ cbuffer cameraParametersCB
 	float gTextureWidth;
 	float gTextureHeight;
 	float gSinglePixelRadius;
+	uint gFrameCount;
 }
 
 /*
@@ -146,6 +147,27 @@ float SampleAlpha(float cocRadius, float singlePixelRadius) {
 	//return min(1.0f, (singlePixelRadius * singlePixelRadius) / (cocRadius * cocRadius));
 }
 
+uint initRand(uint val0, uint val1, uint backoff = 16)
+{
+	uint v0 = val0, v1 = val1, s0 = 0;
+
+	[unroll]
+	for (uint n = 0; n < backoff; n++)
+	{
+		s0 += 0x9e3779b9;
+		v0 += ((v1 << 4) + 0xa341316c) ^ (v1 + s0) ^ ((v1 >> 5) + 0xc8013ea4);
+		v1 += ((v0 << 4) + 0xad90777d) ^ (v0 + s0) ^ ((v0 >> 5) + 0x7e95761e);
+	}
+	return v0;
+}
+
+// Takes our seed, updates it, and returns a pseudorandom float in [0..1]
+float nextRand(inout uint s)
+{
+	s = (1664525u * s + 1013904223u);
+	return float(s & 0x00FFFFFF) / float(0x01000000);
+}
+
 
 PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 {
@@ -164,7 +186,7 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	float alphaSpreadCmpSum;
 	float sampleCount;
 	
-
+	uint randSeed = initRand(pixelPos.x + (uint)gTextureWidth * pixelPos.y, gFrameCount, 16);
 
 
 
@@ -183,7 +205,10 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 			
 			/*Here let’s suppose that the circular filter has the same size as the max_coc in tile */
 
-			float2 sampleCoord = float2( ((float)pos.x * 2.0f + coc * kernelX[i]) / gTextureWidth, ((float)pos.y * 2.0f + coc * kernelY[i]) / gTextureHeight);
+			//float2 sampleCoord = float2( ((float)pos.x * 2.0f + coc * kernelX[i] / 2.0f) / gTextureWidth, ((float)pos.y * 2.0f + coc * kernelY[i] / 2.0f) / gTextureHeight);
+			//float2 sampleCoord = float2( ((float)pos.x * 2.0f + coc * kernelX[i]) / gTextureWidth, ((float)pos.y * 2.0f + coc * kernelY[i]) / gTextureHeight);
+			float2 sampleCoord = float2( ((float)pos.x * 2.0f + coc * kernelX[i] / 2.0f + (nextRand(randSeed) - 0.5f) * PI * coc / 24.0f) / gTextureWidth, ((float)pos.y * 2.0f + coc * kernelY[i] / 2.0f + (nextRand(randSeed) - 0.5f) * PI * coc / 24.0f) / gTextureHeight);
+			//float2 sampleCoord = float2( ((float)pos.x * 2.0f + coc * kernelX[i] + (nextRand(randSeed) - 0.5f) * PI * coc / 24.0f) / gTextureWidth, ((float)pos.y * 2.0f + coc * kernelY[i] + (nextRand(randSeed) - 0.5f) * PI * coc / 24.0f) / gTextureHeight);
 			float3 presortSample = gPresortBuffer.SampleLevel(gSampler, sampleCoord, 0).rgb;			//sample level 0 of texture using texcoord
 			
 			/*Get the spread comparison weight*/

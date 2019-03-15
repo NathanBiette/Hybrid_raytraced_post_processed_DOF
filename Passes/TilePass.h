@@ -65,5 +65,5 @@ protected:
 	Scene::SharedPtr            mpScene;                ///< A pointer to the scene we're rendering
 	GraphicsVars::SharedPtr		mpVars;
 	Texture::SharedPtr mptest;
-
+	uint32_t   mFrameCount = 0xdeadbeef;
 };

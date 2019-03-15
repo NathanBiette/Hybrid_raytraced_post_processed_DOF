@@ -221,6 +221,7 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	mainPassShaderVars["cameraParametersCB"]["gTextureWidth"] = (float)mpResManager->getWidth();
 	mainPassShaderVars["cameraParametersCB"]["gTextureHeight"] = (float)mpResManager->getHeight();
 	mainPassShaderVars["cameraParametersCB"]["gSinglePixelRadius"] = 0.7071f;	//const of pixel radius
+	mainPassShaderVars["cameraParametersCB"]["gFrameCount"] = mFrameCount++;
 
 	//sampler setup
 	Sampler::SharedPtr mpPointSampler;
