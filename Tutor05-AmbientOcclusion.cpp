@@ -34,10 +34,8 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 	// Add passes into our pipeline
 	pipeline->setPass(0, SimpleGBufferPass::create());     // Create G-buffer (See Tutorial 3)
 	pipeline->setPass(1, TilePass::create());
-	pipeline->setPass(2, RaytracePass::create());
-	pipeline->setPass(3, CompositePass::create());
-	pipeline->setPass(4, CopyToOutputPass::create());
-	//pipeline->setPass(1, AmbientOcclusionPass::create());  // Create a pass to shoot ambient occlusion rays
+	pipeline->setPass(2, CompositePass::create());
+	pipeline->setPass(3, CopyToOutputPass::create());
  
 	// Define a set of config / window parameters for our program
     SampleConfig config;
