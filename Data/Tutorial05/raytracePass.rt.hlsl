@@ -91,12 +91,12 @@ void GBufferRayGen()
 
 			// Initialize a ray structure for our ray tracer
 			RayDesc ray;
-			ray.Origin = randomOrig;                          // Start our ray at the world-space camera position
-			ray.Direction = normalize(focalPoint - randomOrig);  // Our ray direction
-			ray.TMin = 0.0f;                                // Start at 0.0; for camera, no danger of self-intersection
-			ray.TMax = 1e+38f;                              // Maximum distance to look for a ray hit
+			ray.Origin = randomOrig;							// Start our ray at the world-space camera position
+			ray.Direction = normalize(focalPoint - randomOrig); // Our ray direction
+			ray.TMin = 0.0f;									// Start at 0.0; for camera, no danger of self-intersection
+			ray.TMax = 1e+38f;									// Maximum distance to look for a ray hit
 
-															// Initialize our ray payload (a per-ray, user-definable structure)
+			// Initialize our ray payload (a per-ray, user-definable structure)
 			ColorRayPayload rayData;
 			rayData.colorValue = float4(0.0f);
 
@@ -166,4 +166,5 @@ void PrimaryClosestHit(inout ColorRayPayload rayData, BuiltinIntersectionAttribs
 	//gColor[launchIndex] = colorAccum;
 	rayData.colorValue = colorAccum;
 	// TODO finish alpha dependng on Z
+	rayData.ZValue = 2 * gFar * gNear / (gFar + gNear - (gFar - gNear) * (2 * (/*view transform matrix*/ *shadeData.posW).z - 1.0f));
 }
