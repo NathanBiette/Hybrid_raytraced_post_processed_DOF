@@ -118,6 +118,7 @@ struct PS_OUTPUT
 cbuffer cameraParametersCB
 {
 	float gOffset;
+	float gNearLimitFocusZone;
 	float gDistanceToFocalPlane;
 	float gTextureWidth;
 	float gTextureHeight;
@@ -207,7 +208,7 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 
 			//float2 sampleCoord = float2( ((float)pos.x * 2.0f + coc * kernelX[i] / 2.0f) / gTextureWidth, ((float)pos.y * 2.0f + coc * kernelY[i] / 2.0f) / gTextureHeight);
 			//float2 sampleCoord = float2( ((float)pos.x * 2.0f + coc * kernelX[i]) / gTextureWidth, ((float)pos.y * 2.0f + coc * kernelY[i]) / gTextureHeight);
-			float2 sampleCoord = float2( ((float)pos.x * 2.0f + coc * kernelX[i] / 2.0f + (nextRand(randSeed) - 0.5f) * PI * coc / 24.0f) / gTextureWidth, ((float)pos.y * 2.0f + coc * kernelY[i] / 2.0f + (nextRand(randSeed) - 0.5f) * PI * coc / 24.0f) / gTextureHeight);
+			float2 sampleCoord = float2( ((float)pos.x * 2.0f + coc * kernelX[i] / 2.0f + (nextRand(randSeed) - 0.5f) * PI * coc / 48.0f) / gTextureWidth, ((float)pos.y * 2.0f + coc * kernelY[i] / 2.0f + (nextRand(randSeed) - 0.5f) * PI * coc / 48.0f) / gTextureHeight);
 			//float2 sampleCoord = float2( ((float)pos.x * 2.0f + coc * kernelX[i] + (nextRand(randSeed) - 0.5f) * PI * coc / 24.0f) / gTextureWidth, ((float)pos.y * 2.0f + coc * kernelY[i] + (nextRand(randSeed) - 0.5f) * PI * coc / 24.0f) / gTextureHeight);
 			float3 presortSample = gPresortBuffer.SampleLevel(gSampler, sampleCoord, 0).rgb;			//sample level 0 of texture using texcoord
 			
@@ -232,9 +233,13 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 				spreadCmp = saturate(3.0f * presortSample.r / coc);
 			}
 
-			foreground += spreadCmp * presortSample.b * float4(gHalfResFrameColor.SampleLevel(gSampler, sampleCoord, 0).rgb, 1.0f);
-			background += spreadCmp * presortSample.g * float4(gHalfResFrameColor.SampleLevel(gSampler, sampleCoord, 0).rgb, 1.0f);
-			alphaSpreadCmpSum += spreadCmp * SampleAlpha(presortSample.r / 2.0f, gSinglePixelRadius);
+			if (gHalfResZBuffer.SampleLevel(gSampler, sampleCoord, 0).r > gNearLimitFocusZone) {
+				foreground += spreadCmp * presortSample.b * float4(gHalfResFrameColor.SampleLevel(gSampler, sampleCoord, 0).rgb, 1.0f);
+				background += spreadCmp * presortSample.g * float4(gHalfResFrameColor.SampleLevel(gSampler, sampleCoord, 0).rgb, 1.0f);
+				alphaSpreadCmpSum += spreadCmp * SampleAlpha(presortSample.r / 2.0f, gSinglePixelRadius);
+			}
+
+
 
 			/*We may want to smooth transition using intermediary values for spreadCmp*/
 		}

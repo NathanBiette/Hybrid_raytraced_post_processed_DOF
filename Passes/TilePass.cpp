@@ -218,6 +218,7 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	mainPassShaderVars["gPresortBuffer"] = presortBuffer;
 	mainPassShaderVars["cameraParametersCB"]["gDistanceToFocalPlane"] = mDistFocalPlane;
 	mainPassShaderVars["cameraParametersCB"]["gOffset"] = mDistFocalPlane - mNearLimitFocusZone;
+	mainPassShaderVars["cameraParametersCB"]["gNearLimitFocusZone"] = mNearLimitFocusZone;
 	mainPassShaderVars["cameraParametersCB"]["gTextureWidth"] = (float)mpResManager->getWidth();
 	mainPassShaderVars["cameraParametersCB"]["gTextureHeight"] = (float)mpResManager->getHeight();
 	mainPassShaderVars["cameraParametersCB"]["gSinglePixelRadius"] = 0.7071f;	//const of pixel radius

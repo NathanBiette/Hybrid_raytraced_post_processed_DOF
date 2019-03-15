@@ -41,6 +41,7 @@ struct SimpleRayPayload
 struct ColorRayPayload
 {
 	float4 colorValue;  // Store 0 if we hit a surface, 1 if we miss all surfaces
+	float ZValue;
 };
 
 // Shader parameters for our ray gen shader that need to be set by the C++ code
@@ -164,4 +165,5 @@ void PrimaryClosestHit(inout ColorRayPayload rayData, BuiltinIntersectionAttribs
 
 	//gColor[launchIndex] = colorAccum;
 	rayData.colorValue = colorAccum;
+	// TODO finish alpha dependng on Z
 }
