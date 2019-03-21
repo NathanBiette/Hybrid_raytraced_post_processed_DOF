@@ -15,7 +15,7 @@
 # LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************************************/
-
+//#include "HostDeviceSharedCode.h"
 #include "RaytracePass.h"
 #include <chrono>
 
@@ -98,6 +98,7 @@ void RaytracePass::execute(RenderContext::SharedPtr pRenderContext)
 	rayGenVars["RayGenCB"]["gPlaneDist"] = mDistFocalPlane;
 	rayGenVars["RayGenCB"]["gFrameCount"] = mFrameCount++;
 	rayGenVars["RayGenCB"]["gNumRays"] = mNumRays;
+	rayGenVars["RayGenCB"]["gViewMatrix"] = mpScene->getActiveCamera()->getViewMatrix();
 
 	// Compute our jitter, either (0,0) as the center or some computed random/MSAA offset
 	float xOff = 0.0f, yOff = 0.0f;
