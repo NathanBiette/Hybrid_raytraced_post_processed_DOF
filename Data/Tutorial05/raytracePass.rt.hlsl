@@ -50,6 +50,9 @@ cbuffer RayGenCB
 	float   gLensRadius;    // Radius of the thin lens.  Use 0 for pinhole camera.
 	float   gFocalLen;      // Focal Length of the lens
 	float   gPlaneDist;      // Distance to the plane where geometry is in focus
+	float   gSensorWidth;      // Distance to the plane where geometry is in focus
+	float   gSensorHeight;      // Distance to the plane where geometry is in focus
+	float   gSensorDepth;      // Distance to the plane where geometry is in focus
 	uint    gFrameCount;    // An integer changing every frame to update the random number
 	float2  gPixelJitter;   // in [0..1]^2.  Should be (0.5,0.5) if no jittering used
 	uint	gNumRays;
@@ -68,10 +71,14 @@ void GBufferRayGen()
 		// Convert our ray index into a ray direction in world space.  
 		float2 pixelCenter = (launchIndex + gPixelJitter) / launchDim;
 		float2 ndc = float2(2, -2) * pixelCenter + float2(-1, 1);
-		float3 rayDir = ndc.x * gCamera.cameraU + ndc.y * gCamera.cameraV + gCamera.cameraW;
+		//float3 rayDir = ndc.x * gCamera.cameraU + ndc.y * gCamera.cameraV + gCamera.cameraW;
+		float3 rayDir = ndc.x * gCamera.cameraU * (gSensorWidth / 2.0f) / (length(gCamera.cameraU)) + ndc.y * gCamera.cameraV * (gSensorHeight/2.0f) / (length(gCamera.cameraV)) + gCamera.cameraW * gSensorDepth / length(gCamera.cameraW);
+		//0.5 * (0.105263 / 2) / norm of U 
+		//float3 rayDir = ndc.x * gCamera.cameraU * gSensorWidth / (length(gCamera.cameraU)) + ndc.y * gCamera.cameraV * gSensorHeight / (length(gCamera.cameraV)) + gCamera.cameraW * gSensorDepth * 0.674f / length(gCamera.cameraW);
 
 		// Find the focal point for this pixel.
-		rayDir /= length(gCamera.cameraW);                     // Make ray have length 1 along the camera's w-axis.
+		//rayDir /= length(gCamera.cameraW);                     // Make ray have length 1 along the camera's w-axis.
+		rayDir /= gSensorDepth;                     // Make ray have length 1 along the camera's w-axis.
 		float3 focalPoint = gCamera.posW + gPlaneDist * rayDir; // Select point on ray a distance to focus plane along the w-axis
 
 																// Initialize a random number generator

@@ -92,10 +92,13 @@ void RaytracePass::execute(RenderContext::SharedPtr pRenderContext)
 	// Pass our camera parameters to the ray generation shader
 	auto rayGenVars = mpRays->getRayGenVars();
 	rayGenVars["gRaytraceMask"] = raytraceMask;
-	rayGenVars["gColor"] = nearFieldBuffer;
+	rayGenVars["gColor"] = farFieldBuffer;
 	rayGenVars["RayGenCB"]["gLensRadius"] = mAperture / 2.0f;
 	rayGenVars["RayGenCB"]["gFocalLen"] = mFocalLength;
 	rayGenVars["RayGenCB"]["gPlaneDist"] = mDistFocalPlane;
+	rayGenVars["RayGenCB"]["gSensorWidth"] = mSensorWidth;
+	rayGenVars["RayGenCB"]["gSensorHeight"] = mSensorWidth * 9.0f / 16.0f;
+	rayGenVars["RayGenCB"]["gSensorDepth"] = 1.0f / (1.0f/ 0.05f - 1.0f / mDistFocalPlane);
 	rayGenVars["RayGenCB"]["gFrameCount"] = mFrameCount++;
 	rayGenVars["RayGenCB"]["gNumRays"] = mNumRays;
 
