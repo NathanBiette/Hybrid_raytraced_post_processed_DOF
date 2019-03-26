@@ -98,7 +98,8 @@ void RaytracePass::execute(RenderContext::SharedPtr pRenderContext)
 	rayGenVars["RayGenCB"]["gPlaneDist"] = mDistFocalPlane;
 	rayGenVars["RayGenCB"]["gSensorWidth"] = mSensorWidth;
 	rayGenVars["RayGenCB"]["gSensorHeight"] = mSensorWidth * 9.0f / 16.0f;
-	rayGenVars["RayGenCB"]["gSensorDepth"] = 1.0f / (1.0f/ 0.05f - 1.0f / mDistFocalPlane);
+//	rayGenVars["RayGenCB"]["gSensorDepth"] = 1.0f / (1.0f/ 0.05f - 1.0f / mDistFocalPlane);
+	rayGenVars["RayGenCB"]["gSensorDepth"] = mDistFocalPlane * mFocalLength / (mDistFocalPlane - mFocalLength);
 	rayGenVars["RayGenCB"]["gFrameCount"] = mFrameCount++;
 	rayGenVars["RayGenCB"]["gNumRays"] = mNumRays;
 

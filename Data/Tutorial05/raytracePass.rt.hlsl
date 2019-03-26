@@ -71,14 +71,18 @@ void GBufferRayGen()
 		// Convert our ray index into a ray direction in world space.  
 		float2 pixelCenter = (launchIndex + gPixelJitter) / launchDim;
 		float2 ndc = float2(2, -2) * pixelCenter + float2(-1, 1);
-		//float3 rayDir = ndc.x * gCamera.cameraU + ndc.y * gCamera.cameraV + gCamera.cameraW;
-		float3 rayDir = ndc.x * gCamera.cameraU * (gSensorWidth / 2.0f) / (length(gCamera.cameraU)) + ndc.y * gCamera.cameraV * (gSensorHeight/2.0f) / (length(gCamera.cameraV)) + gCamera.cameraW * gSensorDepth / length(gCamera.cameraW);
+		float3 rayDir = ndc.x * gCamera.cameraU + ndc.y * gCamera.cameraV + gCamera.cameraW;
+		//float3 rayDir = ndc.x * gCamera.cameraU * (gSensorWidth / 2.0f) / (length(gCamera.cameraU)) + ndc.y * gCamera.cameraV * (gSensorHeight/2.0f) / (length(gCamera.cameraV)) + gCamera.cameraW * gSensorDepth * 0.985f / length(gCamera.cameraW);
 		//0.5 * (0.105263 / 2) / norm of U 
 		//float3 rayDir = ndc.x * gCamera.cameraU * gSensorWidth / (length(gCamera.cameraU)) + ndc.y * gCamera.cameraV * gSensorHeight / (length(gCamera.cameraV)) + gCamera.cameraW * gSensorDepth * 0.674f / length(gCamera.cameraW);
 
 		// Find the focal point for this pixel.
-		//rayDir /= length(gCamera.cameraW);                     // Make ray have length 1 along the camera's w-axis.
-		rayDir /= gSensorDepth;                     // Make ray have length 1 along the camera's w-axis.
+		rayDir /= length(gCamera.cameraW);                     // Make ray have length 1 along the camera's w-axis.
+		//rayDir /= gSensorDepth;                     // Make ray have length 1 along the camera's w-axis.
+		
+		//float3 rayDir = gCamera.cameraU * ndc.x / length(gCamera.cameraU) + gCamera.cameraV * ndc.y * 9.0f / ( 16.0f * length(gCamera.cameraV)) + gCamera.cameraW  / length(gCamera.cameraW);
+
+
 		float3 focalPoint = gCamera.posW + gPlaneDist * rayDir; // Select point on ray a distance to focus plane along the w-axis
 
 																// Initialize a random number generator
