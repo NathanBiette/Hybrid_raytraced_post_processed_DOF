@@ -80,5 +80,6 @@ protected:
 
 	vec3      mBgColor = vec3(0.5f, 0.5f, 1.0f);
 	uint32_t   mFrameCount = 0xdeadbeef;
-	uint mNumRays = 128;
+	//uint mNumRays = 128;
+	uint mNumRays = 64;
 };
