@@ -54,11 +54,19 @@ protected:
 
 												   //Thin lens parameters
 	float mFNumber = 2.0f;						// f number (typeless) = F/A (A = aperture)
-	float mFocalLength = 0.05f;					// here we take 50mm of focal length 
+	float mFocalLength = 0.1f;					// here we take 50mm of focal length 
 	float mDistFocalPlane = 1.0f;				// What is our distance to focal plane (meaning where we focus on, 1m here)
 	float mAperture = mFocalLength / mFNumber;	//the diameter of the lens in thin lens model
 												//full frame camera = 36x24 mm 
-	float mSensorWidth = 0.036f;
+	//float mSensorWidth = 0.036f;
+	/*sensor width is determined by fov of raster camera to be coherent.
+	sensor width = 2*f*distFocalPlane/(distFocalPlane - f)*tan(fovAngleHorizon/2)
+	here we assume fovAngleHorizon = 90 degrees
+	*/
+	float mSensorWidth = 2.0f * mFocalLength * mDistFocalPlane / (mDistFocalPlane - mFocalLength);
+	//float mSensorHeight = 0.024f;
+	/*16:9 ratio here*/
+	float mSensorHeight = mSensorWidth * 9.0f / 16.0f;
 	float mImageWidth = 1920.0f;
 	//near and far limits of focus zone
 	float mNearLimitFocusZone = mAperture * mFocalLength * mDistFocalPlane / (mAperture * mFocalLength + (float)sqrt(2) * (mDistFocalPlane - mFocalLength) * mSensorWidth / mImageWidth);
@@ -72,5 +80,6 @@ protected:
 
 	vec3      mBgColor = vec3(0.5f, 0.5f, 1.0f);
 	uint32_t   mFrameCount = 0xdeadbeef;
-	uint mNumRays = 128;
+	//uint mNumRays = 128;
+	uint mNumRays = 64;
 };

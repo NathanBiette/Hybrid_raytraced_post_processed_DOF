@@ -1,5 +1,6 @@
 static const float PI = 3.14159265f;
 static const float Z_RANGE = 0.03f; //standard deviation of Z used if Gaussian weights computation
+static const float STRENGTH_TWEAK = 0.0f; //standard deviation of Z used if Gaussian weights computation
 
 Texture2D<float4>   gDilate;
 Texture2D<float4>   gZBuffer;
@@ -82,7 +83,7 @@ float Gaussian(float mean, float standardDeviation, float value) {
 Returns the luma of a color supposing RGB color spaces use the ITU-R BT.709 primaries
 */
 float Luma(float3 color) {
-	return 0.2126f*color.r + 0.7152f*color.g + 0.0722f*color.b;
+	return max(0.01f, 0.2126f*color.r + 0.7152f*color.g + 0.0722f*color.b);
 }
 //##################################################################################
 
@@ -141,7 +142,7 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	float weigth = 0.0f;
 
 	for (int i = 0; i < 8; i++) {
-		weigth = abs(Z - sampleZ[i]) * Gaussian(0.0f , Z_RANGE, abs(Z - sampleZ[i]));
+		weigth = abs(Z - sampleZ[i]) * Gaussian(0.0f , Z_RANGE, abs(Z - sampleZ[i])) * (1.0f / (1.0f +  (1.0f - STRENGTH_TWEAK) * Luma(sampleColor[i])) );
 		sumColor += sampleColor[i] * weigth;
 		sumWeigth += weigth;
 	}
@@ -150,7 +151,9 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	This is to avoid using a null sum of weights in focus area
 	*/
 	if (sumWeigth > 0.001f) {
-		halfResColor.rgb = halfResColor.rgb / 2.0f + sumColor / (sumWeigth * 2.0f);
+		//halfResColor.rgb = halfResColor.rgb / 2.0f + sumColor / (sumWeigth * 2.0f);
+		weigth = Gaussian(0.0f, Z_RANGE, 0.0f) * (1.0f / (1.0f + (1.0f - STRENGTH_TWEAK) * Luma(halfResColor.rgb)));
+		halfResColor.rgb = (halfResColor.rgb * weigth + sumColor) / (sumWeigth + weigth);
 	}
 	
 	/*
