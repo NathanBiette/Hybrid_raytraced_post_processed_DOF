@@ -233,15 +233,12 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 				spreadCmp = saturate(3.0f * presortSample.r / coc);
 			}
 
-			if (gHalfResZBuffer.SampleLevel(gSampler, sampleCoord, 0).r > gNearLimitFocusZone) {
-				foreground += spreadCmp * presortSample.b * float4(gHalfResFrameColor.SampleLevel(gSampler, sampleCoord, 0).rgb, 1.0f);
-				background += spreadCmp * presortSample.g * float4(gHalfResFrameColor.SampleLevel(gSampler, sampleCoord, 0).rgb, 1.0f);
-				alphaSpreadCmpSum += spreadCmp * SampleAlpha(presortSample.r / 2.0f, gSinglePixelRadius);
-			}
+			//if (gHalfResZBuffer.SampleLevel(gSampler, sampleCoord, 0).r > gNearLimitFocusZone) {
+			foreground += spreadCmp * presortSample.b * float4(gHalfResFrameColor.SampleLevel(gSampler, sampleCoord, 0).rgb, 1.0f);
+			background += spreadCmp * presortSample.g * float4(gHalfResFrameColor.SampleLevel(gSampler, sampleCoord, 0).rgb, 1.0f);
+			alphaSpreadCmpSum += spreadCmp * SampleAlpha(presortSample.r / 2.0f, gSinglePixelRadius);
+			//}
 
-
-
-			/*We may want to smooth transition using intermediary values for spreadCmp*/
 		}
 
 		farFieldValue = float4( (background.rgb + foreground.rgb) / alphaSpreadCmpSum, 1.0);

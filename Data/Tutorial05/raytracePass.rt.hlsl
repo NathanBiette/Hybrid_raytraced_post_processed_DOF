@@ -144,6 +144,7 @@ static const float haltonY[64] = {
 };
 
 Texture2D<float4> gRaytraceMask;
+Texture2D<float4> gZBuffer;
 // The output textures, where we store our G-buffer results.  See bindings in C++ code.
 RWTexture2D<float4> gColor;
 
@@ -206,7 +207,8 @@ void GBufferRayGen()
 																// Initialize a random number generator
 		uint randSeed = initRand(launchIndex.x + launchIndex.y * launchDim.x, gFrameCount, 16);
 
-		float4 accumColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
+		float4 accumColorNear = float4(0.0f, 0.0f, 0.0f, 1.0f);
+		float4 accumColorFar = float4(0.0f, 0.0f, 0.0f, 1.0f);
 		uint numHits = 0;
 		//shoot many rays
 
@@ -249,14 +251,29 @@ void GBufferRayGen()
 			if (rayData.ZValue < gPlaneDist) {
 			//if (rayData.ZValue == 0.0f) {
 			//if (gViewMatrix[0][0] < 0.0f) {
-				accumColor += rayData.colorValue;
-				//accumColor += float4(rayData.ZValue);
+				accumColorNear += rayData.colorValue;
+				//float zNormalized = rayData.ZValue / gPlaneDist;
+				//accumColorNear += float4(zNormalized, zNormalized, 0.0f, 1.0f);
 				numHits++;
+			}
+			else {
+				accumColorFar += rayData.colorValue;
 			}
 
 			
 		}
-		gColor[launchIndex] = float4(accumColor.rgb / (float)numHits, (float)numHits/(float)gNumRays);
+		//gColor[launchIndex] = float4(accumColorNear.rgb / (float)numHits, (float)numHits/(float)gNumRays);
+		
+		if (numHits > 0) {
+			if (gZBuffer[launchIndex].x > gPlaneDist) {
+				gColor[launchIndex] = float4(accumColorNear.rgb / (float)numHits, 1.0f) * (float)numHits / (float)gNumRays + gColor[launchIndex] * (1.0f - (float)numHits / (float)gNumRays);
+			}
+			else {
+				gColor[launchIndex] = float4((accumColorNear.rgb + accumColorFar.rgb) / (float)gNumRays, 1.0f);
+			}
+			
+		}
+		//gColor[launchIndex] = float4((accumColorNear.rgb + accumColorFar.rgb) / (float)gNumRays, 1.0f);
 	}
 
 }
@@ -311,7 +328,8 @@ void PrimaryClosestHit(inout ColorRayPayload rayData, BuiltinIntersectionAttribs
 	//rayData.ZValue = vsOut.posH.z / vsOut.posH.w;
 	//rayData.ZValue = mul(gCamera.viewMat, float4(vsOut.posW, 1.0f)).z;
 	//rayData.ZValue = mul(float4(vsOut.posW, 1.0f), gViewMatrix).z;
-	rayData.ZValue = vsOut.posW.z;
+	//rayData.ZValue = vsOut.posW.z;
+	rayData.ZValue = dot( (shadeData.posW - gCamera.posW), gCamera.cameraW / length(gCamera.cameraW) );
 	
 	//rayData.ZValue = (shadeData.posW - gCamera.posW).x;
 }

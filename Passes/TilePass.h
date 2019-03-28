@@ -43,6 +43,9 @@ protected:
 	float mNearLimitFocusZone = mAperture * mFocalLength * mDistFocalPlane / (mAperture * mFocalLength + (float)sqrt(2) * (mDistFocalPlane - mFocalLength) * mSensorWidth / mImageWidth);
 	float mFarLimitFocusZone = mAperture * mFocalLength * mDistFocalPlane / (mAperture * mFocalLength - (float)sqrt(2) * (mDistFocalPlane - mFocalLength) * mSensorWidth / mImageWidth);
 
+	float mDepthRange = 0.1f;
+	//float mDepthRange = 1.0f;
+
 	// Implementation of SimpleRenderPass interface
 	bool initialize(RenderContext::SharedPtr pRenderContext, ResourceManager::SharedPtr pResManager) override;
 	void execute(RenderContext::SharedPtr pRenderContext) override;
