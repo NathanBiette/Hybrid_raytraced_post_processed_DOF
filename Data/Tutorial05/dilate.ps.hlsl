@@ -19,7 +19,7 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	uint2 pixelPos = (uint2)pos.xy;
 
 	float max_coc = 0.0f;
-	float nearest_Z = gTiles[uint2(pixelPos.x, pixelPos.y)].g;
+	float nearest_Z = 0.0f;
 
 	int start_x = 0;
 	int start_y = 0;
@@ -35,12 +35,8 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 
 	for (int i = start_x; i < stop_x + 1; i++) {
 		for (int j = start_y; j < stop_y + 1; j++) {
-			if (gTiles[uint2(i, j)].r > max_coc) {
-				max_coc = gTiles[uint2(i, j)].r;
-			}
-			if (gTiles[uint2(i, j)].g < nearest_Z) {
-				nearest_Z = gTiles[uint2(i, j)].g;
-			}
+			max_coc = max(max_coc, gTiles[uint2(i, j)].r);
+			nearest_Z += (gTiles[uint2(i, j)].g > 0.0f) * ((gTiles[uint2(i, j)].g - nearest_Z) * (nearest_Z > 0.0f && gTiles[uint2(i, j)].g < nearest_Z) + gTiles[uint2(i, j)].g * (nearest_Z == 0.0f));
 		}
 	}
 	DilatePassOutput.dilatedTiles = float4(max_coc, nearest_Z, 0.0f, 1.0f);
