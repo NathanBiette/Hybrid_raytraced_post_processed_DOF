@@ -101,68 +101,77 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 		}
 	}
 
-	//####################### presort pass #######################################################
-	float coc = COC(Z);
-	float2 depthCmp2 = DepthCmp2(Z, gDilate[uint2(pixelPos.x / 10, pixelPos.y / 10)].g, gDepthRange);
-	float sampleAlpha = SampleAlpha(coc / 2.0f, gSinglePixelRadius);
-	
-	/*
-	Store COC of pixel, alpha background, alpha foreground 
-	*/
-	DownPresortBufOut.presortBuffer = float4(coc, sampleAlpha * depthCmp2.x, sampleAlpha * depthCmp2.y, 0.0f);
-	
-	//####################### downsample pass #######################################################
+	if (Z > gDistanceToFocalPlane) {
 
-	float4 halfResColor = gFrameColor.SampleLevel(gSampler, texC, 0);
-	float2 sampleLocation = float2(0.0f);
-	float sampleZ[8] = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
-	float3 sampleColor[9];
-	float4 Z4;
-
-	for (int i = 0; i < 8; i++) {
-		//find sample location while scaling filter width with coc size 
-		sampleColor[i] = float3(0.0f, 0.0f, 0.0f);
-		// to get location of the sample : take the center of current pixel, get the rigth angle according to index of sample on unit circle and get the rigth distance to center pixel
-		// the distance to pixel is the COC (diameter) size / 12 (coc /(2*6) 2 is to get the radius, 6 is to fill in the space between main filter samples (3 circles of sample, 49taps)) 
-		sampleLocation.x = ((float)pixelPos.x * 2.0f + coc / 12.0f * cos(2.0f * PI* (float)i / 8.0f)) / gTextureWidth;
-		sampleLocation.y = ((float)pixelPos.y * 2.0f + coc / 12.0f * sin(2.0f * PI* (float)i / 8.0f)) / gTextureHeight;
+		//####################### presort pass #######################################################
+		float coc = COC(Z);
+		float2 depthCmp2 = DepthCmp2(Z, gDilate[uint2(pixelPos.x / 10, pixelPos.y / 10)].g, gDepthRange);
+		float sampleAlpha = SampleAlpha(coc / 2.0f, gSinglePixelRadius);
 
 		/*
-		Here as we are supposedly sampling the Z buffer with the border to 0 sampler, 
-		if we sample outside, the min Z = 0 and sample doesn't count anyway
-		Gather4 takes the 4 red value used in bilinear sampling and output float4(r1,r2,r3,r4)
+		Store COC of pixel, alpha background, alpha foreground
 		*/
-		Z4 = gZBuffer.Gather(gSampler, sampleLocation);
-		sampleZ[i] = min(min(min(Z4.r, Z4.g), Z4.b), Z4.a);
-		sampleColor[i] = gFrameColor.SampleLevel(gSampler, sampleLocation, 0).rgb;
+		DownPresortBufOut.presortBuffer = float4(coc, sampleAlpha * depthCmp2.x, sampleAlpha * depthCmp2.y, 0.0f);
+
+		//####################### downsample pass #######################################################
+
+		float4 halfResColor = gFrameColor.SampleLevel(gSampler, texC, 0);
+		float2 sampleLocation = float2(0.0f);
+		float sampleZ[8] = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
+		float3 sampleColor[9];
+		float4 Z4;
+
+		for (int i = 0; i < 8; i++) {
+			//find sample location while scaling filter width with coc size 
+			sampleColor[i] = float3(0.0f, 0.0f, 0.0f);
+			// to get location of the sample : take the center of current pixel, get the rigth angle according to index of sample on unit circle and get the rigth distance to center pixel
+			// the distance to pixel is the COC (diameter) size / 12 (coc /(2*6) 2 is to get the radius, 6 is to fill in the space between main filter samples (3 circles of sample, 49taps)) 
+			sampleLocation.x = ((float)pixelPos.x * 2.0f + coc / 12.0f * cos(2.0f * PI* (float)i / 8.0f)) / gTextureWidth;
+			sampleLocation.y = ((float)pixelPos.y * 2.0f + coc / 12.0f * sin(2.0f * PI* (float)i / 8.0f)) / gTextureHeight;
+
+			/*
+			Here as we are supposedly sampling the Z buffer with the border to 0 sampler,
+			if we sample outside, the min Z = 0 and sample doesn't count anyway
+			Gather4 takes the 4 red value used in bilinear sampling and output float4(r1,r2,r3,r4)
+			*/
+			Z4 = gZBuffer.Gather(gSampler, sampleLocation);
+			sampleZ[i] = min(min(min(Z4.r, Z4.g), Z4.b), Z4.a);
+			sampleColor[i] = gFrameColor.SampleLevel(gSampler, sampleLocation, 0).rgb;
+		}
+
+		float3 sumColor = float3(0.0f);
+		float sumWeigth = 0.0f;
+		float weigth = 0.0f;
+
+		for (int i = 0; i < 8; i++) {
+			weigth = abs(Z - sampleZ[i]) * Gaussian(0.0f, Z_RANGE, abs(Z - sampleZ[i])) * (1.0f / (1.0f + (1.0f - STRENGTH_TWEAK) * Luma(sampleColor[i])));
+			sumColor += sampleColor[i] * weigth;
+			sumWeigth += weigth;
+		}
+
+		/*
+		This is to avoid using a null sum of weights in focus area
+		*/
+		if (sumWeigth > 0.001f) {
+			//halfResColor.rgb = halfResColor.rgb / 2.0f + sumColor / (sumWeigth * 2.0f);
+			weigth = Gaussian(0.0f, Z_RANGE, 0.0f) * (1.0f / (1.0f + (1.0f - STRENGTH_TWEAK) * Luma(halfResColor.rgb)));
+			halfResColor.rgb = (halfResColor.rgb * weigth + sumColor) / (sumWeigth + weigth);
+		}
+
+		/*
+		Store the haflres color and Z
+		*/
+		DownPresortBufOut.halfResColor = float4(halfResColor.rgb, 1.0f);
+		DownPresortBufOut.halfResZBuffer = float4(Z, 0.0f, 0.0f, 0.0f);
+
+		//#################################################################################################
+	}
+	else {
+		DownPresortBufOut.presortBuffer = float4(0.0f, 0.0f, 0.0f, 0.0f);
+		DownPresortBufOut.halfResColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
+		DownPresortBufOut.halfResZBuffer = float4(0.0f, 0.0f, 0.0f, 0.0f);
 	}
 
-	float3 sumColor = float3(0.0f);
-	float sumWeigth = 0.0f;
-	float weigth = 0.0f;
-
-	for (int i = 0; i < 8; i++) {
-		weigth = abs(Z - sampleZ[i]) * Gaussian(0.0f , Z_RANGE, abs(Z - sampleZ[i])) * (1.0f / (1.0f +  (1.0f - STRENGTH_TWEAK) * Luma(sampleColor[i])) );
-		sumColor += sampleColor[i] * weigth;
-		sumWeigth += weigth;
-	}
-
-	/*
-	This is to avoid using a null sum of weights in focus area
-	*/
-	if (sumWeigth > 0.001f) {
-		//halfResColor.rgb = halfResColor.rgb / 2.0f + sumColor / (sumWeigth * 2.0f);
-		weigth = Gaussian(0.0f, Z_RANGE, 0.0f) * (1.0f / (1.0f + (1.0f - STRENGTH_TWEAK) * Luma(halfResColor.rgb)));
-		halfResColor.rgb = (halfResColor.rgb * weigth + sumColor) / (sumWeigth + weigth);
-	}
-	
-	/*
-	Store the haflres color and Z
-	*/
-	DownPresortBufOut.halfResColor = float4(halfResColor.rgb, 1.0f);
-	DownPresortBufOut.halfResZBuffer = float4(Z, 0.0f, 0.0f, 0.0f);
-	
-	//#################################################################################################
 
 	return DownPresortBufOut;
 }

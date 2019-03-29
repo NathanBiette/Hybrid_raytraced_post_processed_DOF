@@ -115,7 +115,7 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	// Failed to create a valid FBO?  We're done.
 	if (!outputFbo) return;
 	// Clear our color buffers to background color, depth to 1, stencil to 0
-	pRenderContext->clearFbo(outputFbo.get(), vec4(0.5f, 0.5f, 0.5f, 1.0f), 1.0f, 0);
+	pRenderContext->clearFbo(outputFbo.get(), vec4(0.0f, 0.0f, 0.0f, 1.0f), 1.0f, 0);
 
 	// Set shader parameters for our accumulation pass
 	auto shaderVars = mpTilingShader->getVars();
@@ -155,7 +155,7 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	
 	Fbo::SharedPtr outputFbo3 = mpResManager->createManagedFbo({ "Half_res_color", "Presort_buffer", "Half_res_z_buffer" }, "Z-Buffer2");
 	if (!outputFbo) return;
-	pRenderContext->clearFbo(outputFbo3.get(), vec4(0.0f, 0.0f, 0.0f, 0.0f), 1.0f, 0);
+	pRenderContext->clearFbo(outputFbo3.get(), vec4(0.0f, 0.0f, 0.0f, 1.0f), 1.0f, 0);
 	
 	Texture::SharedPtr dilate = mpResManager->getTexture("Dilate");
 	Texture::SharedPtr frameColor = mpResManager->getTexture("FrameColor");
