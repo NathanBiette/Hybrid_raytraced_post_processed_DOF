@@ -1,4 +1,5 @@
 static const float PI = 3.14159265f;
+static const float JITTER_TWEAK = 2.0f;
 
 static const float kernelX[48] = {
 	0.5f,
@@ -194,6 +195,7 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	/*#case 1:  where foreground and background will contribute to far field only*/
 
 	//if (gDilate[uint2(pixelPos.x / 10, pixelPos.y / 10)].g > gDistanceToFocalPlane - gOffset) {
+	if (gHalfResZBuffer[pixelPos].r > gDistanceToFocalPlane) {
 
 		foreground = gPresortBuffer[pixelPos].b * float4(gHalfResFrameColor[pixelPos].rgb, 1.0);
 		background = gPresortBuffer[pixelPos].g * float4(gHalfResFrameColor[pixelPos].rgb, 1.0);
@@ -208,7 +210,7 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 
 			//float2 sampleCoord = float2( ((float)pos.x * 2.0f + coc * kernelX[i] / 2.0f) / gTextureWidth, ((float)pos.y * 2.0f + coc * kernelY[i] / 2.0f) / gTextureHeight);
 			//float2 sampleCoord = float2( ((float)pos.x * 2.0f + coc * kernelX[i]) / gTextureWidth, ((float)pos.y * 2.0f + coc * kernelY[i]) / gTextureHeight);
-			float2 sampleCoord = float2( ((float)pos.x * 2.0f + coc * kernelX[i] / 2.0f + (nextRand(randSeed) - 0.5f) * PI * coc / 48.0f) / gTextureWidth, ((float)pos.y * 2.0f + coc * kernelY[i] / 2.0f + (nextRand(randSeed) - 0.5f) * PI * coc / 48.0f) / gTextureHeight);
+			float2 sampleCoord = float2( ((float)pos.x * 2.0f + coc * kernelX[i] / 2.0f + (nextRand(randSeed) - 0.5f) * PI * coc / (48.0f * JITTER_TWEAK)) / gTextureWidth, ((float)pos.y * 2.0f + coc * kernelY[i] / 2.0f + (nextRand(randSeed) - 0.5f) * PI * coc / (48.0f * JITTER_TWEAK)) / gTextureHeight);
 			//float2 sampleCoord = float2( ((float)pos.x * 2.0f + coc * kernelX[i] + (nextRand(randSeed) - 0.5f) * PI * coc / 24.0f) / gTextureWidth, ((float)pos.y * 2.0f + coc * kernelY[i] + (nextRand(randSeed) - 0.5f) * PI * coc / 24.0f) / gTextureHeight);
 			float3 presortSample = gPresortBuffer.SampleLevel(gSampler, sampleCoord, 0).rgb;			//sample level 0 of texture using texcoord
 			
@@ -242,13 +244,19 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 		}
 
 		farFieldValue = float4( (background.rgb + foreground.rgb) / alphaSpreadCmpSum, 1.0);
-		nearFieldValue = float4(0.0f);
+		nearFieldValue = float4(0.0f, 0.0f, 0.0f, 1.0f);
+
+	}
+	else {
+		farFieldValue = float4(0.0f, 0.0f, 0.0f, 1.0f);
+		nearFieldValue = float4(0.0f, 0.0f, 0.0f, 1.0f);
+	}
 
 	/*
 	#case 2 : where foreground-background gradient may overlap focus plane -> sort contribution to fields on sample basis
 	*/
-	/*
-	} else {
+	 
+	/*else {
 		
 		farFieldValue = float4(0.0f, 0.0f, 0.0f , 0.0f);
 		foreground = gPresortBuffer[pixelPos].b * float4(gHalfResFrameColor[pixelPos].rgb, 1.0);

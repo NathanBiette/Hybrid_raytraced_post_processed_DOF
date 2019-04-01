@@ -169,7 +169,7 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	else {
 		DownPresortBufOut.presortBuffer = float4(0.0f, 0.0f, 0.0f, 0.0f);
 		DownPresortBufOut.halfResColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
-		DownPresortBufOut.halfResZBuffer = float4(0.0f, 0.0f, 0.0f, 0.0f);
+		DownPresortBufOut.halfResZBuffer = float4(Z, 0.0f, 0.0f, 1.0f);
 	}
 
 
