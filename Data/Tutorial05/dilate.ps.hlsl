@@ -1,4 +1,5 @@
 Texture2D<float4>   gTiles;
+Texture2D<float4>   gRaytraceTiles;
 
 cbuffer textureParametersCB
 {
@@ -20,6 +21,7 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 
 	float max_coc = 0.0f;
 	float nearest_Z = 0.0f;
+	bool raytraceTile = false;
 
 	int start_x = 0;
 	int start_y = 0;
@@ -33,13 +35,17 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	int stop_x = min(pixelPos.x + 1, width - 1);
 	int stop_y = min(pixelPos.y + 1, height - 1);
 
+	//Iterate through 3x3 neighbourhood and find nearest Z in tile in neighbourhood
+
 	for (int i = start_x; i < stop_x + 1; i++) {
 		for (int j = start_y; j < stop_y + 1; j++) {
 			max_coc = max(max_coc, gTiles[uint2(i, j)].r);
 			nearest_Z += (gTiles[uint2(i, j)].g > 0.0f) * ((gTiles[uint2(i, j)].g - nearest_Z) * (nearest_Z > 0.0f && gTiles[uint2(i, j)].g < nearest_Z) + gTiles[uint2(i, j)].g * (nearest_Z == 0.0f));
+			raytraceTile = raytraceTile || gRaytraceTiles[uint2(i, j)].r > 0.0f;
 		}
 	}
 	DilatePassOutput.dilatedTiles = float4(max_coc, nearest_Z, 0.0f, 1.0f);
-	DilatePassOutput.raytraceMask = nearest_Z < distToFocusPlane ? 1.0f : 0.0f;
+	//DilatePassOutput.raytraceMask = gRaytraceTiles[pixelPos].r < distToFocusPlane ? 1.0f : 0.0f;
+	DilatePassOutput.raytraceMask = raytraceTile;
 	return DilatePassOutput;
 }

@@ -94,7 +94,7 @@ void RaytracePass::execute(RenderContext::SharedPtr pRenderContext)
 	auto rayGenVars = mpRays->getRayGenVars();
 	rayGenVars["gRaytraceMask"] = raytraceMask;
 	rayGenVars["gZBuffer"] = halfResZBuffer;
-	rayGenVars["gColor"] = nearFieldBuffer;
+	rayGenVars["gColor"] = farFieldBuffer;
 	rayGenVars["RayGenCB"]["gLensRadius"] = mAperture / 2.0f;
 	rayGenVars["RayGenCB"]["gFocalLen"] = mFocalLength;
 	rayGenVars["RayGenCB"]["gPlaneDist"] = mDistFocalPlane;

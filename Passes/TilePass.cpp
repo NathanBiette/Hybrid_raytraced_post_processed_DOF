@@ -52,6 +52,7 @@ bool TilePass::initialize(RenderContext::SharedPtr pRenderContext, ResourceManag
 	Falcor::logWarning(std::string("INITIALIZATION - VIEWPORT HEIGHT = ") + std::to_string(mpResManager->getHeight()));
 
 	mpResManager->requestTextureResource("Tiles", ResourceFormat::RG16Float,(Falcor::Resource::BindFlags)112U, width / 20 , height / 20); //specifying size seems to work well
+	mpResManager->requestTextureResource("RaytraceTiles", ResourceFormat::RG16Float,(Falcor::Resource::BindFlags)112U, width / 20 , height / 20); //specifying size seems to work well
 	mpResManager->requestTextureResource("Dilate", ResourceFormat::RG16Float,(Falcor::Resource::BindFlags)112U, width / 20 , height / 20); 
 	mpResManager->requestTextureResource("RaytraceMask", ResourceFormat::R16Float,(Falcor::Resource::BindFlags)112U, width / 20 , height / 20); 
 
@@ -111,7 +112,7 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	// If our input texture is invalid, or we've been asked to skip accumulation, do nothing.
 	if (!ZBuffer) return;
 
-	Fbo::SharedPtr outputFbo = mpResManager->createManagedFbo({"Tiles" }, "Z-Buffer2");
+	Fbo::SharedPtr outputFbo = mpResManager->createManagedFbo({"Tiles", "RaytraceTiles" }, "Z-Buffer2");
 	// Failed to create a valid FBO?  We're done.
 	if (!outputFbo) return;
 	// Clear our color buffers to background color, depth to 1, stencil to 0
@@ -142,8 +143,12 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	Texture::SharedPtr tiles = mpResManager->getTexture("Tiles");
 	if (!tiles) return;
 
+	Texture::SharedPtr raytraceTiles = mpResManager->getTexture("RaytraceTiles");
+	if (!tiles) return;
+
 	auto dilateShaderVars = mpDilateShader->getVars();
 	dilateShaderVars["gTiles"] = tiles;
+	dilateShaderVars["gRaytraceTiles"] = raytraceTiles;
 	dilateShaderVars["textureParametersCB"]["width"] = (int)mpResManager->getWidth() / 20;
 	dilateShaderVars["textureParametersCB"]["height"] = (int)mpResManager->getHeight() / 20;
 	dilateShaderVars["textureParametersCB"]["distToFocusPlane"] = mDistFocalPlane;
