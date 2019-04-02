@@ -73,12 +73,30 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 {
 	PS_OUTPUT compositePassBufOut;
 	float4 farFieldSamples[9];
+	float4 nearFieldSamples[9];
+
 	for (int i = 0; i < 3; i++) {
 		for (int j = 0; j < 3; j++) {
 			farFieldSamples[i*3 + j] = gFarField.SampleLevel(gSampler, float2( (pos.x + 2.0f * ((float)i - 1.0f))/gTextureWidth, (pos.y + 2.0f * ((float)j - 1.0f))/gTextureHeight), 0);
+			if (gRTMask.SampleLevel(gSampler, texC, 0).r > 0.0f) {
+				nearFieldSamples[i * 3 + j] = gNearField.SampleLevel(gSampler, float2((pos.x + 2.0f * ((float)i - 1.0f)) / gTextureWidth, (pos.y + 2.0f * ((float)j - 1.0f)) / gTextureHeight), 0);
+			}
 		}
 	}
 	float4 farFieldColor = Median9(farFieldSamples);
+	
+	float4 nearFieldColor = float4(0.0f);
+	// If there was raytracing here
+	if (gRTMask.SampleLevel(gSampler, texC, 0).r > 0.0f) {
+		// get the median value to remove noise 
+		nearFieldColor = Median9(nearFieldSamples);
+		// and check for 0 values when at tile corner 
+		if (nearFieldColor.r == 0.0f && nearFieldColor.a == 1.0f) {
+			nearFieldColor = gNearField.SampleLevel(gSampler, texC, 0);
+		}
+	}
+
+
 	float4 focusColor = gFullResColor.SampleLevel(gSampler, texC, 0);
 	float Z = gZBuffer.SampleLevel(gSampler, texC, 0).r;
 	float farBlendFactor = saturate((Z - gFarFieldFocusLimit) / (BLENDING_TWEAK * gFarFocusZoneRange));
@@ -105,12 +123,16 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 			
 			// Composite semi-transparent RT foreground on top 
 			float nearBlendFactor = saturate(gNearField.SampleLevel(gSampler, texC, 0).a);
+			//float nearBlendFactor = saturate(nearFieldColor.a);
 			compositePassBufOut.finalImage = float4(nearBlendFactor * gNearField.SampleLevel(gSampler, texC, 0).rgb + (1.0f - nearBlendFactor) * compositePassBufOut.finalImage.rgb, 1.0f);
+			//compositePassBufOut.finalImage = float4(nearBlendFactor * nearFieldColor.rgb + (1.0f - nearBlendFactor) * compositePassBufOut.finalImage.rgb, 1.0f);
 		}
 	}
 	else {
-		float nearBlendFactor = saturate(gNearField.SampleLevel(gSampler, texC, 0).a);
-		compositePassBufOut.finalImage = float4(nearBlendFactor * gNearField.SampleLevel(gSampler, texC, 0).rgb + (1.0f - nearBlendFactor) * compositePassBufOut.finalImage.rgb, 1.0f);
+		//float nearBlendFactor = saturate(gNearField.SampleLevel(gSampler, texC, 0).a);
+		float nearBlendFactor = saturate(nearFieldColor.a);
+		//compositePassBufOut.finalImage = float4(nearBlendFactor * gNearField.SampleLevel(gSampler, texC, 0).rgb + (1.0f - nearBlendFactor) * compositePassBufOut.finalImage.rgb, 1.0f);
+		compositePassBufOut.finalImage = float4(nearBlendFactor * nearFieldColor.rgb + (1.0f - nearBlendFactor) * compositePassBufOut.finalImage.rgb, 1.0f);
 	}
 
 
