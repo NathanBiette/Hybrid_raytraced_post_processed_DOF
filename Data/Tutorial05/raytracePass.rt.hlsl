@@ -282,7 +282,7 @@ void GBufferRayGen()
 		}
 		// else no foreground color
 		else {
-			gColorForeground[launchIndex] = float4(0.0f, 0.0f, 0.0f, 1.0f);
+			gColorForeground[launchIndex] = float4(0.0f, 0.0f, 0.0f, 0.0f);
 		}
 
 		// If no hit in the far scene, no background color

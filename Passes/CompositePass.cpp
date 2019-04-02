@@ -75,7 +75,9 @@ void CompositePass::execute(RenderContext::SharedPtr pRenderContext)
 	Texture::SharedPtr nearFieldBuffer = mpResManager->getTexture("Half_res_near_field");
 	if (!nearFieldBuffer) return;
 	Texture::SharedPtr raytraceFarFieldBuffer = mpResManager->getTexture("Half_res_raytrace_far_field");
-	if (!nearFieldBuffer) return;
+	if (!raytraceFarFieldBuffer) return;
+	Texture::SharedPtr raytraceMask = mpResManager->getTexture("RaytraceMask");
+	if (!raytraceMask) return;
 	Texture::SharedPtr fullResBuffer = mpResManager->getTexture("FrameColor");
 	if (!fullResBuffer) return;
 	Fbo::SharedPtr outputFbo = mpResManager->createManagedFbo({ "Final_image" }, "Z-Buffer2");
@@ -89,6 +91,7 @@ void CompositePass::execute(RenderContext::SharedPtr pRenderContext)
 	compositeShaderVars["gFarField"] = farFieldBuffer;
 	compositeShaderVars["gNearField"] = nearFieldBuffer;
 	compositeShaderVars["gRTFarField"] = raytraceFarFieldBuffer;
+	compositeShaderVars["gRTMask"] = raytraceMask;
 	compositeShaderVars["gFullResColor"] = fullResBuffer;
 	compositeShaderVars["cameraParametersCB"]["gFarFocusZoneRange"] = mFarLimitFocusZone - mDistFocalPlane;
 	compositeShaderVars["cameraParametersCB"]["gNearFocusZoneRange"] = mDistFocalPlane - mNearLimitFocusZone;

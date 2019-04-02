@@ -1,9 +1,11 @@
 static const float BLENDING_TWEAK = 3.0f;
+static const float FAR_RT_BLEND_TWEAK = 2.0f;
 
 Texture2D<float4>   gZBuffer;
 Texture2D<float4>   gFarField;
 Texture2D<float4>   gNearField;
 Texture2D<float4>   gRTFarField;
+Texture2D<float4>   gRTMask;
 Texture2D<float4>   gFullResColor;
 
 SamplerState gSampler;
@@ -93,6 +95,22 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	}// in front of focus plane -> 
 	else {
 		compositePassBufOut.finalImage = gRTFarField.SampleLevel(gSampler, texC, 0);
+	}
+
+	if (Z > gDistFocusPlane) {
+		if (gRTMask.SampleLevel(gSampler, texC, 0).r > 0.0f) {
+			// Leak raytrace background into post processed background to get smooth transitions
+			float farBlendFactor = saturate(gNearField.SampleLevel(gSampler, texC, 0).a * FAR_RT_BLEND_TWEAK);
+			compositePassBufOut.finalImage = float4(farBlendFactor * gRTFarField.SampleLevel(gSampler, texC, 0).rgb + (1.0f - farBlendFactor) * compositePassBufOut.finalImage.rgb, 1.0f);
+			
+			// Composite semi-transparent RT foreground on top 
+			float nearBlendFactor = saturate(gNearField.SampleLevel(gSampler, texC, 0).a);
+			compositePassBufOut.finalImage = float4(nearBlendFactor * gNearField.SampleLevel(gSampler, texC, 0).rgb + (1.0f - nearBlendFactor) * compositePassBufOut.finalImage.rgb, 1.0f);
+		}
+	}
+	else {
+		float nearBlendFactor = saturate(gNearField.SampleLevel(gSampler, texC, 0).a);
+		compositePassBufOut.finalImage = float4(nearBlendFactor * gNearField.SampleLevel(gSampler, texC, 0).rgb + (1.0f - nearBlendFactor) * compositePassBufOut.finalImage.rgb, 1.0f);
 	}
 
 
