@@ -3,6 +3,7 @@ static const float BLENDING_TWEAK = 3.0f;
 Texture2D<float4>   gZBuffer;
 Texture2D<float4>   gFarField;
 Texture2D<float4>   gNearField;
+Texture2D<float4>   gRTFarField;
 Texture2D<float4>   gFullResColor;
 
 SamplerState gSampler;
@@ -21,6 +22,7 @@ cbuffer cameraParametersCB
 	float gNearFieldFocusLimit;
 	float gTextureWidth;
 	float gTextureHeight;
+	float gDistFocusPlane;
 	//float gSinglePixelRadius;
 }
 
@@ -78,14 +80,22 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	float4 focusColor = gFullResColor.SampleLevel(gSampler, texC, 0);
 	float Z = gZBuffer.SampleLevel(gSampler, texC, 0).r;
 	float farBlendFactor = saturate((Z - gFarFieldFocusLimit) / (BLENDING_TWEAK * gFarFocusZoneRange));
-	float nearBlendFactor = saturate((gNearFieldFocusLimit - Z) / (BLENDING_TWEAK * gNearFocusZoneRange));
+	//float nearBlendFactor = saturate((gNearFieldFocusLimit - Z) / (BLENDING_TWEAK * gNearFocusZoneRange));
 
+
+	// far field -> blend between focus and not far 
 	if (Z > gFarFieldFocusLimit) {
+		//compositePassBufOut.finalImage = float4(farFieldColor.rgb, 1.0f);
 		compositePassBufOut.finalImage = float4(farBlendFactor * farFieldColor.rgb + (1.0f - farBlendFactor) * focusColor.rgb, 1.0f);
-	}
+	}// between focus plane and end of focus area -> focused sharp image
+	else if(Z > gDistFocusPlane){
+		compositePassBufOut.finalImage = float4(focusColor.rgb, 1.0f);
+	}// in front of focus plane -> 
 	else {
-		compositePassBufOut.finalImage = float4(nearBlendFactor * focusColor.rgb + (1.0f - nearBlendFactor) * farFieldColor.rgb, 1.0f);
+		compositePassBufOut.finalImage = gRTFarField.SampleLevel(gSampler, texC, 0);
 	}
+
+
 	return compositePassBufOut;
 }
 

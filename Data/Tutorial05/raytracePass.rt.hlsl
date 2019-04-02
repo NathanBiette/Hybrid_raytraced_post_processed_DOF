@@ -146,7 +146,8 @@ static const float haltonY[64] = {
 Texture2D<float4> gRaytraceMask;
 Texture2D<float4> gZBuffer;
 // The output textures, where we store our G-buffer results.  See bindings in C++ code.
-RWTexture2D<float4> gColor;
+RWTexture2D<float4> gColorForeground;
+RWTexture2D<float4> gColorBackground;
 
 // Payload for our primary rays.  This shader doesn't actually use the data, but it is currently
 //    required to use a user-defined payload while tracing a ray.  So define a simple one.
@@ -262,18 +263,38 @@ void GBufferRayGen()
 
 			
 		}
-		//gColor[launchIndex] = float4(accumColorNear.rgb / (float)numHits, (float)numHits/(float)gNumRays);
-		
+		//gColorForeground[launchIndex] = float4(accumColorNear.rgb / (float)numHits, (float)numHits/(float)gNumRays);
+		/*
 		if (numHits > 0) {
 			if (gZBuffer[launchIndex].x > gPlaneDist) {
-				gColor[launchIndex] = float4(accumColorNear.rgb / (float)numHits, 1.0f) * (float)numHits / (float)gNumRays + gColor[launchIndex] * (1.0f - (float)numHits / (float)gNumRays);
+				gColorForeground[launchIndex] = float4(accumColorNear.rgb / (float)numHits, 1.0f) * (float)numHits / (float)gNumRays + gColorForeground[launchIndex] * (1.0f - (float)numHits / (float)gNumRays);
 			}
 			else {
-				gColor[launchIndex] = float4((accumColorNear.rgb + accumColorFar.rgb) / (float)gNumRays, 1.0f);
+				gColorForeground[launchIndex] = float4((accumColorNear.rgb + accumColorFar.rgb) / (float)gNumRays, 1.0f);
 			}
 			
+		}*/
+		//gColorForeground[launchIndex] = float4((accumColorNear.rgb + accumColorFar.rgb) / (float)gNumRays, 1.0f);
+		
+		// If at least one foreground hit, store near color with semi transparency in alpha
+		if (numHits > 0) {
+			gColorForeground[launchIndex] = float4(accumColorNear.rgb / (float)numHits, (float)numHits / (float)gNumRays);
 		}
-		//gColor[launchIndex] = float4((accumColorNear.rgb + accumColorFar.rgb) / (float)gNumRays, 1.0f);
+		// else no foreground color
+		else {
+			gColorForeground[launchIndex] = float4(0.0f, 0.0f, 0.0f, 1.0f);
+		}
+
+		// If no hit in the far scene, no background color
+		if (numHits == gNumRays) {
+			gColorBackground[launchIndex] = float4(0.0f, 0.0f, 0.0f, 1.0f);
+		}
+		// else get background color
+		else {
+			gColorBackground[launchIndex] = float4(accumColorFar.rgb / (float)(gNumRays - numHits), 1.0f);
+		}
+		
+
 	}
 
 }

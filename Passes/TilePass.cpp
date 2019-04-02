@@ -62,7 +62,7 @@ bool TilePass::initialize(RenderContext::SharedPtr pRenderContext, ResourceManag
 
 	mpResManager->requestTextureResource("Half_res_far_field", ResourceFormat::RGBA16Float, (Falcor::Resource::BindFlags)112U, width / 2, height / 2);
 	mpResManager->requestTextureResource("Half_res_near_field", ResourceFormat::RGBA16Float, (Falcor::Resource::BindFlags)112U, width / 2, height / 2);
-	
+	mpResManager->requestTextureResource("Half_res_raytrace_far_field", ResourceFormat::RGBA16Float, (Falcor::Resource::BindFlags)112U, width / 2, height / 2);
 
 	mpResManager->requestTextureResource("Z-Buffer2", ResourceFormat::D24UnormS8, ResourceManager::kDepthBufferFlags);
 
@@ -204,7 +204,7 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	mpDownPresortShader->execute(pRenderContext, mpGfxState);
 
 	//########################  Fourth pass -> main pass  ########################################
-	Fbo::SharedPtr outputFbo4 = mpResManager->createManagedFbo({ "Half_res_far_field", "Half_res_near_field" }, "Z-Buffer2");
+	Fbo::SharedPtr outputFbo4 = mpResManager->createManagedFbo({ "Half_res_far_field", "Half_res_near_field", "Half_res_raytrace_far_field" }, "Z-Buffer2");
 	if (!outputFbo) return;
 	pRenderContext->clearFbo(outputFbo4.get(), vec4(0.0f, 0.0f, 0.0f, 0.0f), 1.0f, 0);
 
