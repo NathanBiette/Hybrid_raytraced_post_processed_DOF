@@ -122,10 +122,10 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 			compositePassBufOut.finalImage = float4(farBlendFactor * gRTFarField.SampleLevel(gSampler, texC, 0).rgb + (1.0f - farBlendFactor) * compositePassBufOut.finalImage.rgb, 1.0f);
 			
 			// Composite semi-transparent RT foreground on top 
-			float nearBlendFactor = saturate(gNearField.SampleLevel(gSampler, texC, 0).a);
-			//float nearBlendFactor = saturate(nearFieldColor.a);
-			compositePassBufOut.finalImage = float4(nearBlendFactor * gNearField.SampleLevel(gSampler, texC, 0).rgb + (1.0f - nearBlendFactor) * compositePassBufOut.finalImage.rgb, 1.0f);
-			//compositePassBufOut.finalImage = float4(nearBlendFactor * nearFieldColor.rgb + (1.0f - nearBlendFactor) * compositePassBufOut.finalImage.rgb, 1.0f);
+			//float nearBlendFactor = saturate(gNearField.SampleLevel(gSampler, texC, 0).a);
+			float nearBlendFactor = saturate(nearFieldColor.a);
+			//compositePassBufOut.finalImage = float4(nearBlendFactor * gNearField.SampleLevel(gSampler, texC, 0).rgb + (1.0f - nearBlendFactor) * compositePassBufOut.finalImage.rgb, 1.0f);
+			compositePassBufOut.finalImage = float4(nearBlendFactor * nearFieldColor.rgb + (1.0f - nearBlendFactor) * compositePassBufOut.finalImage.rgb, 1.0f);
 		}
 	}
 	else {
