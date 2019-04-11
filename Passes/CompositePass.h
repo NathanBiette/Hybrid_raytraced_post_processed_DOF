@@ -22,12 +22,13 @@ protected:
 	bool appliesPostprocess() override { return true; }
 	bool requiresScene() override { return false; }
 
-	float mFNumber = 2.0f;                  // f number (typeless) = F/A (A = aperture)
-	float mFocalLength = 0.05f;              // here we take 50mm of focal length 
+	//Thin lens parameters
+	float mFNumber = 2.0f;						// f number (typeless) = F/A (A = aperture)
+	float mFocalLength = 0.1f;					// here we take 50mm of focal length 
 	float mDistFocalPlane = 1.0f;				// What is our distance to focal plane (meaning where we focus on, 1m here)
-	float mAperture = mFocalLength / mFNumber;
-	//full frame camera = 36x24 mm 
-	float mSensorWidth = 0.036f;
+	float mAperture = mFocalLength / mFNumber;	//the diameter of the lens in thin lens model
+
+	float mSensorWidth = 2.0f * mFocalLength * mDistFocalPlane / (mDistFocalPlane - mFocalLength);
 	float mImageWidth = 1920.0f;
 	//near and far limits of focus zone
 	float mNearLimitFocusZone = mAperture * mFocalLength * mDistFocalPlane / (mAperture * mFocalLength + (float)sqrt(2) * (mDistFocalPlane - mFocalLength) * mSensorWidth / mImageWidth);

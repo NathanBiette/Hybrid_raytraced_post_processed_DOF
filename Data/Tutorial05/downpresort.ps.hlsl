@@ -108,7 +108,8 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	/*
 	Store COC of pixel, alpha background, alpha foreground 
 	*/
-	DownPresortBufOut.presortBuffer = float4(coc, sampleAlpha * depthCmp2.x, sampleAlpha * depthCmp2.y, 0.0f);
+	float foregroundAlphaTweak = 1.0f;
+	DownPresortBufOut.presortBuffer = float4(coc, sampleAlpha * depthCmp2.x, foregroundAlphaTweak * sampleAlpha * depthCmp2.y, 0.0f);
 	
 	//####################### downsample pass #######################################################
 
