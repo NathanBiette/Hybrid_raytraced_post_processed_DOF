@@ -79,6 +79,7 @@ Gaussian function
 float Gaussian(float mean, float standardDeviation, float value) {
 	return exp(-0.5f * (value - mean) * (value - mean) / (standardDeviation * standardDeviation)) / (2.506628f * standardDeviation);
 }
+
 /*
 Returns the luma of a color supposing RGB color spaces use the ITU-R BT.709 primaries
 */
@@ -103,14 +104,12 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 
 	if (Z > gDistanceToFocalPlane) {
 
-		//####################### presort pass #######################################################
+		//####################### presort pass ##########################################################
 		float coc = COC(Z);
 		float2 depthCmp2 = DepthCmp2(Z, gDilate[uint2(pixelPos.x / 10, pixelPos.y / 10)].g, gDepthRange);
 		float sampleAlpha = SampleAlpha(coc / 2.0f, gSinglePixelRadius);
 
-		/*
-		Store COC of pixel, alpha background, alpha foreground
-		*/
+		// Store COC of pixel, alpha background, alpha foreground
 		DownPresortBufOut.presortBuffer = float4(coc, sampleAlpha * depthCmp2.x, sampleAlpha * depthCmp2.y, 0.0f);
 
 		//####################### downsample pass #######################################################
@@ -122,10 +121,14 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 		float4 Z4;
 
 		for (int i = 0; i < 8; i++) {
-			//find sample location while scaling filter width with coc size 
+			// Find sample location while scaling filter width with coc size 
 			sampleColor[i] = float3(0.0f, 0.0f, 0.0f);
-			// to get location of the sample : take the center of current pixel, get the rigth angle according to index of sample on unit circle and get the rigth distance to center pixel
-			// the distance to pixel is the COC (diameter) size / 12 (coc /(2*6) 2 is to get the radius, 6 is to fill in the space between main filter samples (3 circles of sample, 49taps)) 
+			/*
+			To get location of the sample : take the center of current pixel, 
+			get the rigth angle according to index of sample on unit circle and get the rigth distance to center pixel
+			The distance to pixel is the COC (diameter) size / 12 (coc /(2*6) 2 is to get the radius, 
+			 6 is to fill in the space between main filter samples (3 circles of sample, 49taps)) 
+			*/
 			sampleLocation.x = ((float)pixelPos.x * 2.0f + coc / 12.0f * cos(2.0f * PI* (float)i / 8.0f)) / gTextureWidth;
 			sampleLocation.y = ((float)pixelPos.y * 2.0f + coc / 12.0f * sin(2.0f * PI* (float)i / 8.0f)) / gTextureHeight;
 
@@ -149,24 +152,20 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 			sumWeigth += weigth;
 		}
 
-		/*
-		This is to avoid using a null sum of weights in focus area
-		*/
+		// This is to avoid using a null sum of weights in focus area
 		if (sumWeigth > 0.001f) {
-			//halfResColor.rgb = halfResColor.rgb / 2.0f + sumColor / (sumWeigth * 2.0f);
 			weigth = Gaussian(0.0f, Z_RANGE, 0.0f) * (1.0f / (1.0f + (1.0f - STRENGTH_TWEAK) * Luma(halfResColor.rgb)));
 			halfResColor.rgb = (halfResColor.rgb * weigth + sumColor) / (sumWeigth + weigth);
 		}
 
-		/*
-		Store the haflres color and Z
-		*/
+		// Store the haflres color and Z
 		DownPresortBufOut.halfResColor = float4(halfResColor.rgb, 1.0f);
 		DownPresortBufOut.halfResZBuffer = float4(Z, 0.0f, 0.0f, 0.0f);
 
 		//#################################################################################################
 	}
 	else {
+		//####################### presort pass #######################################################
 		DownPresortBufOut.presortBuffer = float4(0.0f, 0.0f, 0.0f, 0.0f);
 		DownPresortBufOut.halfResColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
 		DownPresortBufOut.halfResZBuffer = float4(Z, 0.0f, 0.0f, 1.0f);

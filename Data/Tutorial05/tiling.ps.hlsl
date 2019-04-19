@@ -21,29 +21,39 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	PS_OUTPUT TilePassOutput;
 	uint2 pixelPos = (uint2)pos.xy;
 
-	float max_coc = 0.0f;
-	float max_coc_RT = 0.0f;
-	//float nearest_Z = gZBuffer[uint2(pixelPos.x * 20, pixelPos.y * 20)].r;
-	//float nearestZFar = gZBuffer[uint2(pixelPos.x * 20, pixelPos.y * 20)].r * (gZBuffer[uint2(pixelPos.x * 20, pixelPos.y * 20)].r > gDistanceToFocalPlane);
-	float nearestZFar = 0.0f;
+	float maxBackgroundCOC = 0.0f;
+	float maxForegroundCOC = 0.0f;
+	float nearestBackgroundZ = 0.0f;
+	float nearestForegroundZ = 0.0f;
+
 	bool nearInTile = false;
 
 	for (int x = pixelPos.x * 20; x < pixelPos.x * 20 + 20; x++) {
 		for (int y = pixelPos.y * 20; y < pixelPos.y * 20 + 20; y++) {
-			nearestZFar += (gZBuffer[uint2(x, y)].r > gDistanceToFocalPlane) 
-				* ((nearestZFar > 0.0f && gZBuffer[uint2(x, y)].r < nearestZFar)
-				* (gZBuffer[uint2(x, y)].r - nearestZFar)
-				+ (nearestZFar == 0.0f)
-				* (gZBuffer[uint2(x, y)].r - nearestZFar));
-			max_coc = max(max_coc, COC(gZBuffer[uint2(x, y)].r) * (gZBuffer[uint2(x, y)].r > gDistanceToFocalPlane));
-			max_coc_RT = max(max_coc_RT, COC(gZBuffer[uint2(x, y)].r) * (gZBuffer[uint2(x, y)].r <= gDistanceToFocalPlane));
-			//Check if at least one sample is in foreground for raytrace mask
+
+			nearestBackgroundZ += (gZBuffer[uint2(x, y)].r > gDistanceToFocalPlane)
+				* ((nearestBackgroundZ > 0.0f && gZBuffer[uint2(x, y)].r < nearestBackgroundZ)
+				* (gZBuffer[uint2(x, y)].r - nearestBackgroundZ)
+				+ (nearestBackgroundZ == 0.0f)
+				* (gZBuffer[uint2(x, y)].r));
+
+			nearestForegroundZ += (gZBuffer[uint2(x, y)].r <= gDistanceToFocalPlane)
+				* ((nearestForegroundZ > 0.0f && gZBuffer[uint2(x, y)].r < nearestForegroundZ)
+				* (gZBuffer[uint2(x, y)].r - nearestForegroundZ)
+				+ (nearestForegroundZ == 0.0f)
+				* (gZBuffer[uint2(x, y)].r));
+
+			maxBackgroundCOC = max(maxBackgroundCOC, COC(gZBuffer[uint2(x, y)].r) * (gZBuffer[uint2(x, y)].r > gDistanceToFocalPlane));
+			maxForegroundCOC = max(maxForegroundCOC, COC(gZBuffer[uint2(x, y)].r) * (gZBuffer[uint2(x, y)].r <= gDistanceToFocalPlane));
+			
+			// Check if at least one sample is in foreground for raytrace mask
 			nearInTile = nearInTile || gZBuffer[uint2(x, y)].r < gDistanceToFocalPlane;
 		}
 	}
 
-	TilePassOutput.Tiles = float4(max_coc, nearestZFar, 0.0f, 1.0f);
-	TilePassOutput.RaytraceTiles = float4((float)nearInTile, max_coc_RT, 0.0f, 1.0f);
+	// Pack in one texture (max COC background, nearest Z in tile background, max COC foreground, nearest Z in tile foreground)
+	TilePassOutput.Tiles = float4(maxBackgroundCOC, nearestBackgroundZ, maxForegroundCOC, nearestForegroundZ);
+	TilePassOutput.RaytraceTiles = float4((float)nearInTile, maxForegroundCOC, 0.0f, 1.0f);
 	return TilePassOutput;
 }
 
