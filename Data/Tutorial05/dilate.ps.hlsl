@@ -25,20 +25,14 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	bool raytraceTile = false;
 
 	// Handle image border during sampling
-	int start_x = 0;
-	int start_y = 0;
-	if (pixelPos.x > 0) {
-		start_x = pixelPos.x - 1;
-	}
-	if (pixelPos.y > 0) {
-		start_y = pixelPos.y - 1;
-	}
-	int stop_x = min(pixelPos.x + 1, width - 1);
-	int stop_y = min(pixelPos.y + 1, height - 1);
+	int startX = 0 + (pixelPos.x > 0) * (pixelPos.x - 1);
+	int startY = 0 + (pixelPos.y > 0) * (pixelPos.y - 1);
+	int stopX = min(pixelPos.x + 1, width - 1);
+	int stopY = min(pixelPos.y + 1, height - 1);
 
 	// Iterate through 3x3 neighbourhood and find nearest Z in tile in neighbourhood
-	for (int i = start_x; i < stop_x + 1; i++) {
-		for (int j = start_y; j < stop_y + 1; j++) {
+	for (int i = startX; i < stopX + 1; i++) {
+		for (int j = startY; j < stopY + 1; j++) {
 
 			maxBackgroundCOC = max(maxBackgroundCOC, gTiles[uint2(i, j)].r);
 			maxForegroundCOC = max(maxForegroundCOC, gTiles[uint2(i, j)].b);
@@ -52,8 +46,6 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 				* ((gTiles[uint2(i, j)].a - nearestForegroundZ)
 				* (nearestForegroundZ > 0.0f && gTiles[uint2(i, j)].a < nearestForegroundZ)
 				+ gTiles[uint2(i, j)].a * (nearestForegroundZ == 0.0f));
-
-			//raytraceTile = raytraceTile || gRaytraceTiles[uint2(i, j)].r > 0.0f;
 		}
 	}
 

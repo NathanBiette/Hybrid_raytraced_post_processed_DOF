@@ -177,30 +177,34 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 {
 	PS_OUTPUT MainPassBufOut;
 	uint2 pixelPos = (uint2)pos.xy;
-
-	// Initialization
-	float4 foreground;
-	float4 background;
-	float coc = gDilate[uint2(pixelPos.x / 10, pixelPos.y / 10)].r; //max coc in tile
-	float coc_RT = gRayTraceMask[uint2(pixelPos.x / 10, pixelPos.y / 10)].g; //max coc in tile
-	float4 farFieldValue;
-	float4 nearFieldValue;
-
-	float3 sampleColor = float3(0.0f, 0.0f, 0.0f);
-	float spreadCmp;
-	float alphaSpreadCmpSum;
-	
 	uint randSeed = initRand(pixelPos.x + (uint)gTextureWidth * pixelPos.y, gFrameCount, 16);
 
-	// Initialisation with target pixel values
-	foreground = gPresortBuffer[pixelPos].b * float4(gHalfResFrameColor[pixelPos].rgb, 1.0);
-	background = gPresortBuffer[pixelPos].g * float4(gHalfResFrameColor[pixelPos].rgb, 1.0);
-	alphaSpreadCmpSum = SampleAlpha(gPresortBuffer[pixelPos].r / 2.0f, gSinglePixelRadius);
+	// Initialization
+	float4 nearBackgroundColor;
+	float4 farBackgroundColor;
+	float cocBackground = gDilate[uint2(pixelPos.x / 10, pixelPos.y / 10)].r; //max coc in background tile
+	float backgroundSpreadCmp;
+	float backgroundAlphaSpreadCmpSum;
+
+	nearBackgroundColor = gPresortBuffer[pixelPos].b * float4(gHalfResFrameColor[pixelPos].rgb, 1.0);
+	farBackgroundColor = gPresortBuffer[pixelPos].g * float4(gHalfResFrameColor[pixelPos].rgb, 1.0);
+	backgroundAlphaSpreadCmpSum = SampleAlpha(gPresortBuffer[pixelPos].r / 2.0f, gSinglePixelRadius);
+
+
+	float4 nearForegroundColor;
+	float4 farForegroundColor;
+	float cocForeground = gDilate[uint2(pixelPos.x / 10, pixelPos.y / 10)].b; //max coc in foreground tile
+	float foregroundSpreadCmp;
+	float foregroundAlphaSpreadCmpSum;
+
+	nearForegroundColor = gPresortBuffer[pixelPos].b * float4(gHalfResFrameColor[pixelPos].rgb, 1.0);
+	farForegroundColor = gPresortBuffer[pixelPos].g * float4(gHalfResFrameColor[pixelPos].rgb, 1.0);
+	foregroundAlphaSpreadCmpSum = SampleAlpha(gPresortBuffer[pixelPos].r / 2.0f, gSinglePixelRadius);
 
 	// For ray trace mask 
 	bool foregroundSampled = gHalfResZBuffer[pixelPos].r <= gDistanceToFocalPlane;
-	float closestForeground = gHalfResZBuffer[pixelPos].r;
-	float furthestBackground = gHalfResZBuffer[pixelPos].r;
+	float closestZForeground = gHalfResZBuffer[pixelPos].r;
+	float furthestZForeground = gHalfResZBuffer[pixelPos].r;
 
 	// Iterate over the samples
 
@@ -208,51 +212,88 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 			
 		/*Here let’s suppose that the circular filter has the same size as the max_coc in tile */
 		
+		//######################################## Background filtering #########################################################
 		// Sampling coordinate for background layer
-		float2 kernelCoord = float2( ((float)pos.x * 2.0f + coc * kernelX[i] / 2.0f) / gTextureWidth, ((float)pos.y * 2.0f + coc * kernelY[i] / 2.0f) / gTextureHeight);
-		float2 jitter = float2( ((nextRand(randSeed) - 0.5f) * PI * coc / (48.0f * JITTER_TWEAK)) / gTextureWidth, ((nextRand(randSeed) - 0.5f) * PI * coc / (48.0f * JITTER_TWEAK)) / gTextureHeight);
-		float2 sampleCoord = kernelCoord + jitter;
+		float2 backgroundKernelCoord = float2( ((float)pos.x * 2.0f + cocBackground * kernelX[i] / 2.0f) / gTextureWidth, ((float)pos.y * 2.0f + cocBackground * kernelY[i] / 2.0f) / gTextureHeight);
+		float2 backgroundJitter = float2( ((nextRand(randSeed) - 0.5f) * PI * cocBackground / (48.0f * JITTER_TWEAK)) / gTextureWidth, ((nextRand(randSeed) - 0.5f) * PI * cocBackground / (48.0f * JITTER_TWEAK)) / gTextureHeight);
+		float2 backgroundSampleCoord = backgroundKernelCoord + backgroundJitter;
+		float3 backgroundPresortSample = gPresortBuffer.SampleLevel(gSampler, backgroundSampleCoord, 0).rgb;			//sample level 0 of texture using texcoord
 
-		// Sampling coordinate for foreground layer
-		float2 sampleForegroundCoord = float2(((float)pos.x * 2.0f + coc_RT * kernelX[i] / 2.0f) / gTextureWidth, ((float)pos.y * 2.0f + coc_RT * kernelY[i] / 2.0f) / gTextureHeight);
-		float3 presortSample = gPresortBuffer.SampleLevel(gSampler, sampleCoord, 0).rgb;			//sample level 0 of texture using texcoord
-			
 		// Get the spread comparison weight
 		if (i < 24) {
-			spreadCmp = saturate(3.0f * presortSample.r / coc - 2.0f);
+			backgroundSpreadCmp = saturate(3.0f * backgroundPresortSample.r / cocBackground - 2.0f);
 		}
 		else if (i < 39) {
-			spreadCmp = saturate(3.0f * presortSample.r / coc - 1.0f);
+			backgroundSpreadCmp = saturate(3.0f * backgroundPresortSample.r / cocBackground - 1.0f);
 		}
 		else {
-			spreadCmp = saturate(3.0f * presortSample.r / coc);
+			backgroundSpreadCmp = saturate(3.0f * backgroundPresortSample.r / cocBackground);
 		}
 
-		// Create the ray trace mask by checking the Z range sampled with the main pass kernel on foreground geometry
-		closestForeground = min(closestForeground, gHalfResZBuffer.SampleLevel(gSampler, sampleForegroundCoord, 0).r);
-		furthestBackground = max(furthestBackground, gHalfResZBuffer.SampleLevel(gSampler, sampleForegroundCoord, 0).r);
-		foregroundSampled = foregroundSampled | (gHalfResZBuffer.SampleLevel(gSampler, sampleForegroundCoord, 0).r <= gDistanceToFocalPlane);
-
 		// Accumulate color for background layer
-		foreground += spreadCmp * presortSample.b * float4(gHalfResFrameColor.SampleLevel(gSampler, sampleCoord, 0).rgb, 1.0f);
-		background += spreadCmp * presortSample.g * float4(gHalfResFrameColor.SampleLevel(gSampler, sampleCoord, 0).rgb, 1.0f);
-		alphaSpreadCmpSum += spreadCmp * SampleAlpha(presortSample.r / 2.0f, gSinglePixelRadius);
+		nearBackgroundColor += backgroundSpreadCmp 
+			* backgroundPresortSample.b 
+			* float4(gHalfResFrameColor.SampleLevel(gSampler, backgroundSampleCoord, 0).rgb, 1.0f) 
+			* (gHalfResZBuffer.SampleLevel(gSampler, backgroundSampleCoord, 0).r > gDistanceToFocalPlane);
+		
+		farBackgroundColor += backgroundSpreadCmp
+			* backgroundPresortSample.g 
+			* float4(gHalfResFrameColor.SampleLevel(gSampler, backgroundSampleCoord, 0).rgb, 1.0f)
+			* (gHalfResZBuffer.SampleLevel(gSampler, backgroundSampleCoord, 0).r > gDistanceToFocalPlane);
+		
+		backgroundAlphaSpreadCmpSum += backgroundSpreadCmp 
+			* SampleAlpha(backgroundPresortSample.r / 2.0f, gSinglePixelRadius)
+			* (gHalfResZBuffer.SampleLevel(gSampler, backgroundSampleCoord, 0).r > gDistanceToFocalPlane);
+
+		//######################################## Foreground filtering #########################################################
+
+		// Sampling coordinate for foreground layer
+		float2 foregroundKernelCoord = float2(((float)pos.x * 2.0f + cocForeground * kernelX[i] / 2.0f) / gTextureWidth, ((float)pos.y * 2.0f + cocForeground * kernelY[i] / 2.0f) / gTextureHeight);
+		float2 foregroundJitter = float2(((nextRand(randSeed) - 0.5f) * PI * cocForeground / (48.0f * JITTER_TWEAK)) / gTextureWidth, ((nextRand(randSeed) - 0.5f) * PI * cocForeground / (48.0f * JITTER_TWEAK)) / gTextureHeight);
+		float2 foregroundSampleCoord = foregroundKernelCoord + foregroundJitter;
+		float3 foregroundPresortSample = gPresortBuffer.SampleLevel(gSampler, foregroundSampleCoord, 0).rgb;
+
+		// Get the spread comparison weight
+		if (i < 24) {
+			foregroundSpreadCmp = saturate(3.0f * foregroundPresortSample.r / cocForeground - 2.0f);
+		}
+		else if (i < 39) {
+			foregroundSpreadCmp = saturate(3.0f * foregroundPresortSample.r / cocForeground - 1.0f);
+		}
+		else {
+			foregroundSpreadCmp = saturate(3.0f * foregroundPresortSample.r / cocForeground);
+		}
+
+		// Accumulate color for foreground layer
+		nearForegroundColor += foregroundSpreadCmp
+			* foregroundPresortSample.b
+			* float4(gHalfResFrameColor.SampleLevel(gSampler, foregroundSampleCoord, 0).rgb, 1.0f)
+			* (gHalfResZBuffer.SampleLevel(gSampler, foregroundSampleCoord, 0).r <= gDistanceToFocalPlane);
+
+		farForegroundColor += foregroundSpreadCmp
+			* foregroundPresortSample.g
+			* float4(gHalfResFrameColor.SampleLevel(gSampler, foregroundSampleCoord, 0).rgb, 1.0f)
+			* (gHalfResZBuffer.SampleLevel(gSampler, foregroundSampleCoord, 0).r <= gDistanceToFocalPlane);
+
+		foregroundAlphaSpreadCmpSum += foregroundSpreadCmp
+			* SampleAlpha(foregroundPresortSample.r / 2.0f, gSinglePixelRadius)
+			* (gHalfResZBuffer.SampleLevel(gSampler, foregroundSampleCoord, 0).r <= gDistanceToFocalPlane);
+
+
+		// Create the ray trace mask by checking the Z range sampled with the main pass kernel on foreground geometry
+		closestZForeground = min(closestZForeground, gHalfResZBuffer.SampleLevel(gSampler, foregroundKernelCoord, 0).r);
+		furthestZForeground = max(furthestZForeground, gHalfResZBuffer.SampleLevel(gSampler, foregroundKernelCoord, 0).r);
+		foregroundSampled = foregroundSampled | (gHalfResZBuffer.SampleLevel(gSampler, foregroundKernelCoord, 0).r <= gDistanceToFocalPlane);
 
 	}
-	
-	if (gHalfResZBuffer[pixelPos].r > gDistanceToFocalPlane) {
-		farFieldValue = float4( (background.rgb + foreground.rgb) / alphaSpreadCmpSum, 1.0);
-		nearFieldValue = float4(0.0f, 0.0f, 0.0f, 1.0f);
 
-	}
-	else {
-		farFieldValue = float4(0.0f, 0.0f, 0.0f, 1.0f);
-		nearFieldValue = float4(0.0f, 0.0f, 0.0f, 1.0f);
-	}
-
-	MainPassBufOut.halfResFarField = farFieldValue;
-	MainPassBufOut.halfResNearField = nearFieldValue;
-	MainPassBufOut.rayTraceMask = float4((float)((furthestBackground - closestForeground) > EDGE_RANGE && foregroundSampled), 0.0f, 0.0f, 1.0f);
+	MainPassBufOut.halfResFarField = (gHalfResZBuffer[pixelPos].r > gDistanceToFocalPlane) ? 
+		float4((farBackgroundColor.rgb + nearBackgroundColor.rgb) / backgroundAlphaSpreadCmpSum, 1.0) :
+		float4(0.0f, 0.0f, 0.0f, 1.0f);
+	MainPassBufOut.halfResNearField = (gHalfResZBuffer[pixelPos].r <= gDistanceToFocalPlane) ?
+		float4((farForegroundColor.rgb + nearForegroundColor.rgb) / foregroundAlphaSpreadCmpSum, 1.0) :
+		float4(0.0f, 0.0f, 0.0f, 1.0f);
+	MainPassBufOut.rayTraceMask = float4((float)((furthestZForeground - closestZForeground) > EDGE_RANGE && foregroundSampled), 0.0f, 0.0f, 1.0f);
 
 	return MainPassBufOut;
 }
