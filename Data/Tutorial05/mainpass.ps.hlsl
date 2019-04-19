@@ -1,5 +1,6 @@
 static const float PI = 3.14159265f;
 static const float JITTER_TWEAK = 2.0f;
+static const float EDGE_RANGE = 0.10f;
 
 static const float kernelX[48] = {
 	0.5f,
@@ -206,7 +207,10 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 
 		//For ray trace mask 
 		bool foregroundSampled = gHalfResZBuffer[pixelPos].r <= gDistanceToFocalPlane;
-		bool backgroundSampled = gHalfResZBuffer[pixelPos].r > gDistanceToFocalPlane;
+		//bool backgroundSampled = gHalfResZBuffer[pixelPos].r > gDistanceToFocalPlane;
+
+		float closestForeground = gHalfResZBuffer[pixelPos].r;
+		float furthestBackground = gHalfResZBuffer[pixelPos].r;
 
 		/*Iterate over the samples*/ 
 
@@ -245,8 +249,10 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 				spreadCmp = saturate(3.0f * presortSample.r / coc);
 			}
 
+			closestForeground = min(closestForeground, gHalfResZBuffer.SampleLevel(gSampler, sampleForegroundCoord, 0).r);
+			furthestBackground = max(furthestBackground, gHalfResZBuffer.SampleLevel(gSampler, sampleForegroundCoord, 0).r);
 			foregroundSampled = foregroundSampled | (gHalfResZBuffer.SampleLevel(gSampler, sampleForegroundCoord, 0).r <= gDistanceToFocalPlane);
-			backgroundSampled = backgroundSampled | (gHalfResZBuffer.SampleLevel(gSampler, sampleForegroundCoord, 0).r > gDistanceToFocalPlane);
+			//backgroundSampled = backgroundSampled | (gHalfResZBuffer.SampleLevel(gSampler, sampleForegroundCoord, 0).r > gDistanceToFocalPlane);
 
 			//if (gHalfResZBuffer.SampleLevel(gSampler, sampleCoord, 0).r > gNearLimitFocusZone) {
 			foreground += spreadCmp * presortSample.b * float4(gHalfResFrameColor.SampleLevel(gSampler, sampleCoord, 0).rgb, 1.0f);
@@ -257,7 +263,6 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 		}
 	
 	if (gHalfResZBuffer[pixelPos].r > gDistanceToFocalPlane) {
-
 		farFieldValue = float4( (background.rgb + foreground.rgb) / alphaSpreadCmpSum, 1.0);
 		nearFieldValue = float4(0.0f, 0.0f, 0.0f, 1.0f);
 
@@ -329,7 +334,7 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	*/
 	MainPassBufOut.halfResFarField = farFieldValue;
 	MainPassBufOut.halfResNearField = nearFieldValue;
-	MainPassBufOut.rayTraceMask = float4((float)(foregroundSampled && backgroundSampled), 0.0f, 0.0f, 1.0f);
+	MainPassBufOut.rayTraceMask = float4((float)((furthestBackground - closestForeground) > EDGE_RANGE && foregroundSampled), 0.0f, 0.0f, 1.0f);
 
 
 
