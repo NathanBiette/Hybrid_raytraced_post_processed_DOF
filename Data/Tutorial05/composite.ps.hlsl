@@ -72,6 +72,7 @@ float4 Median9(vector<float,4>[9] samples) {
 PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 {
 	PS_OUTPUT compositePassBufOut;
+	bool raytraced = gRTMask.SampleLevel(gSampler, texC, 0).r > 0.0f;
 	float4 backgroundPPSamples[9];
 	float4 foregroundPPSamples[9];
 	float4 foregroundRTSamples[9];
@@ -79,16 +80,19 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	for (int i = 0; i < 3; i++) {
 		for (int j = 0; j < 3; j++) {
 			backgroundPPSamples[i*3 + j] = gFarField.SampleLevel(gSampler, float2( (pos.x + 2.0f * ((float)i - 1.0f))/gTextureWidth, (pos.y + 2.0f * ((float)j - 1.0f))/gTextureHeight), 0);
-			if (gRTMask.SampleLevel(gSampler, texC, 0).r > 0.0f) {
+			foregroundPPSamples[i*3 + j] = gNearField.SampleLevel(gSampler, float2( (pos.x + 2.0f * ((float)i - 1.0f))/gTextureWidth, (pos.y + 2.0f * ((float)j - 1.0f))/gTextureHeight), 0);
+			if (raytraced) {
 				foregroundRTSamples[i * 3 + j] = gRTNearField.SampleLevel(gSampler, float2((pos.x + 2.0f * ((float)i - 1.0f)) / gTextureWidth, (pos.y + 2.0f * ((float)j - 1.0f)) / gTextureHeight), 0);
 			}
 		}
 	}
 	float4 backgroundPPColor = Median9(backgroundPPSamples);
+	float4 foregroundPPColor = Median9(foregroundPPSamples);
 	
+
 	float4 foregroundRTColor = float4(0.0f);
 	// If there was raytracing here
-	if (gRTMask.SampleLevel(gSampler, texC, 0).r > 0.0f) {
+	if (raytraced) {
 		// get the median value to remove noise 
 		foregroundRTColor = Median9(foregroundRTSamples);
 		// and check for 0 values when at tile corner 
@@ -100,6 +104,7 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 
 	float4 focusColor = gFullResColor.SampleLevel(gSampler, texC, 0);
 	float Z = gZBuffer.SampleLevel(gSampler, texC, 0).r;
+	
 	float farBlendFactor = saturate((Z - gFarFieldFocusLimit) / (BLENDING_TWEAK * gFarFocusZoneRange));
 
 
@@ -111,7 +116,7 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 		// Between focus plane and end of focus area use focused sharp image
 		compositePassBufOut.finalImage = float4(focusColor.rgb, 1.0f);
 	}
-	else {
+	else if(raytraced){
 		// In object silhouette fill in with background from ray trace
 		compositePassBufOut.finalImage = gRTFarField.SampleLevel(gSampler, texC, 0);
 	}
@@ -120,7 +125,7 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	// Outside foreground object silhouette, leak RT background over PP background and composite RT foreground on top
 	if (Z > gDistFocusPlane) {
 		// If we ray traced this pixel
-		if (gRTMask.SampleLevel(gSampler, texC, 0).r > 0.0f) {
+		if (raytraced) {
 			// Leak raytrace background into post processed background to get smooth transitions
 			float farBlendFactor = saturate(gRTNearField.SampleLevel(gSampler, texC, 0).a * FAR_RT_BLEND_TWEAK);
 			compositePassBufOut.finalImage = float4(farBlendFactor * gRTFarField.SampleLevel(gSampler, texC, 0).rgb + (1.0f - farBlendFactor) * compositePassBufOut.finalImage.rgb, 1.0f);
@@ -132,8 +137,14 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	}
 	// Inside object silhouette, composite RT foreground on top of RT background
 	else {
-		float nearBlendFactor = saturate(foregroundRTColor.a);
-		compositePassBufOut.finalImage = float4(nearBlendFactor * foregroundRTColor.rgb + (1.0f - nearBlendFactor) * compositePassBufOut.finalImage.rgb, 1.0f);
+		if (raytraced) {
+			float nearBlendFactor = saturate(foregroundRTColor.a);
+			compositePassBufOut.finalImage = float4(nearBlendFactor * foregroundRTColor.rgb + (1.0f - nearBlendFactor) * compositePassBufOut.finalImage.rgb, 1.0f);
+		}
+		else {
+			compositePassBufOut.finalImage = float4(foregroundPPColor.rgb, 1.0f);
+		}
+		
 	}
 
 
