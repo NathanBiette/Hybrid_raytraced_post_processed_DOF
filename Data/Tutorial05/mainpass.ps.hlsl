@@ -106,14 +106,16 @@ Texture2D<float4>   gDilate;
 Texture2D<float4>   gHalfResZBuffer;
 Texture2D<float4>   gHalfResFrameColor;
 Texture2D<float4>   gPresortBuffer;
+Texture2D<float4>   gRayTraceMask;
 
 SamplerState gSampler;
 
 struct PS_OUTPUT
 
 {
-	float4 halfResFarField    : SV_Target0;
-	float4 halfResNearField    : SV_Target1;
+	float4 halfResFarField		: SV_Target0;
+	float4 halfResNearField		: SV_Target1;
+	float4 rayTraceMask			: SV_Target2;
 };
 
 cbuffer cameraParametersCB
@@ -180,6 +182,7 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	float4 foreground;
 	float4 background;
 	float coc = gDilate[uint2(pixelPos.x / 10, pixelPos.y / 10)].r; //max coc in tile
+	float coc_RT = gDilate[uint2(pixelPos.x / 10, pixelPos.y / 10)].r; //max coc in tile
 	float4 farFieldValue;
 	float4 nearFieldValue;
 
@@ -195,12 +198,15 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	/*#case 1:  where foreground and background will contribute to far field only*/
 
 	//if (gDilate[uint2(pixelPos.x / 10, pixelPos.y / 10)].g > gDistanceToFocalPlane - gOffset) {
-	if (gHalfResZBuffer[pixelPos].r > gDistanceToFocalPlane) {
+	//if (gHalfResZBuffer[pixelPos].r > gDistanceToFocalPlane) {
 
 		foreground = gPresortBuffer[pixelPos].b * float4(gHalfResFrameColor[pixelPos].rgb, 1.0);
 		background = gPresortBuffer[pixelPos].g * float4(gHalfResFrameColor[pixelPos].rgb, 1.0);
 		alphaSpreadCmpSum = SampleAlpha(gPresortBuffer[pixelPos].r / 2.0f, gSinglePixelRadius);
 
+		//For ray trace mask 
+		bool foregroundSampled = gHalfResZBuffer[pixelPos].r <= gDistanceToFocalPlane;
+		bool backgroundSampled = gHalfResZBuffer[pixelPos].r > gDistanceToFocalPlane;
 
 		/*Iterate over the samples*/ 
 
@@ -210,7 +216,10 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 
 			//float2 sampleCoord = float2( ((float)pos.x * 2.0f + coc * kernelX[i] / 2.0f) / gTextureWidth, ((float)pos.y * 2.0f + coc * kernelY[i] / 2.0f) / gTextureHeight);
 			//float2 sampleCoord = float2( ((float)pos.x * 2.0f + coc * kernelX[i]) / gTextureWidth, ((float)pos.y * 2.0f + coc * kernelY[i]) / gTextureHeight);
-			float2 sampleCoord = float2( ((float)pos.x * 2.0f + coc * kernelX[i] / 2.0f + (nextRand(randSeed) - 0.5f) * PI * coc / (48.0f * JITTER_TWEAK)) / gTextureWidth, ((float)pos.y * 2.0f + coc * kernelY[i] / 2.0f + (nextRand(randSeed) - 0.5f) * PI * coc / (48.0f * JITTER_TWEAK)) / gTextureHeight);
+			//float2 sampleCoord = float2( ((float)pos.x * 2.0f + coc * kernelX[i] / 2.0f + (nextRand(randSeed) - 0.5f) * PI * coc / (48.0f * JITTER_TWEAK)) / gTextureWidth, ((float)pos.y * 2.0f + coc * kernelY[i] / 2.0f + (nextRand(randSeed) - 0.5f) * PI * coc / (48.0f * JITTER_TWEAK)) / gTextureHeight);
+			float2 kernelCoord = float2( ((float)pos.x * 2.0f + coc * kernelX[i] / 2.0f) / gTextureWidth, ((float)pos.y * 2.0f + coc * kernelY[i] / 2.0f) / gTextureHeight);
+			float2 jitter = float2( ((nextRand(randSeed) - 0.5f) * PI * coc / (48.0f * JITTER_TWEAK)) / gTextureWidth, ((nextRand(randSeed) - 0.5f) * PI * coc / (48.0f * JITTER_TWEAK)) / gTextureHeight);
+			float2 sampleCoord = kernelCoord + jitter;
 			//float2 sampleCoord = float2( ((float)pos.x * 2.0f + coc * kernelX[i] + (nextRand(randSeed) - 0.5f) * PI * coc / 24.0f) / gTextureWidth, ((float)pos.y * 2.0f + coc * kernelY[i] + (nextRand(randSeed) - 0.5f) * PI * coc / 24.0f) / gTextureHeight);
 			float3 presortSample = gPresortBuffer.SampleLevel(gSampler, sampleCoord, 0).rgb;			//sample level 0 of texture using texcoord
 			
@@ -235,6 +244,9 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 				spreadCmp = saturate(3.0f * presortSample.r / coc);
 			}
 
+			foregroundSampled = foregroundSampled | (gHalfResZBuffer.SampleLevel(gSampler, sampleCoord, 0).r <= gDistanceToFocalPlane);
+			backgroundSampled = backgroundSampled | (gHalfResZBuffer.SampleLevel(gSampler, sampleCoord, 0).r > gDistanceToFocalPlane);
+
 			//if (gHalfResZBuffer.SampleLevel(gSampler, sampleCoord, 0).r > gNearLimitFocusZone) {
 			foreground += spreadCmp * presortSample.b * float4(gHalfResFrameColor.SampleLevel(gSampler, sampleCoord, 0).rgb, 1.0f);
 			background += spreadCmp * presortSample.g * float4(gHalfResFrameColor.SampleLevel(gSampler, sampleCoord, 0).rgb, 1.0f);
@@ -242,6 +254,8 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 			//}
 
 		}
+	
+	if (gHalfResZBuffer[pixelPos].r > gDistanceToFocalPlane) {
 
 		farFieldValue = float4( (background.rgb + foreground.rgb) / alphaSpreadCmpSum, 1.0);
 		nearFieldValue = float4(0.0f, 0.0f, 0.0f, 1.0f);
@@ -314,6 +328,7 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	*/
 	MainPassBufOut.halfResFarField = farFieldValue;
 	MainPassBufOut.halfResNearField = nearFieldValue;
+	MainPassBufOut.rayTraceMask = foregroundSampled && backgroundSampled;
 
 
 

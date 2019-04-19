@@ -20,6 +20,7 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	uint2 pixelPos = (uint2)pos.xy;
 
 	float max_coc = 0.0f;
+	float max_coc_RT = 0.0f;
 	float nearest_Z = 0.0f;
 	bool raytraceTile = false;
 
@@ -40,12 +41,13 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	for (int i = start_x; i < stop_x + 1; i++) {
 		for (int j = start_y; j < stop_y + 1; j++) {
 			max_coc = max(max_coc, gTiles[uint2(i, j)].r);
+			max_coc_RT = max(max_coc_RT, gRaytraceTiles[uint2(i, j)].g);
 			nearest_Z += (gTiles[uint2(i, j)].g > 0.0f) * ((gTiles[uint2(i, j)].g - nearest_Z) * (nearest_Z > 0.0f && gTiles[uint2(i, j)].g < nearest_Z) + gTiles[uint2(i, j)].g * (nearest_Z == 0.0f));
 			raytraceTile = raytraceTile || gRaytraceTiles[uint2(i, j)].r > 0.0f;
 		}
 	}
 	DilatePassOutput.dilatedTiles = float4(max_coc, nearest_Z, 0.0f, 1.0f);
 	//DilatePassOutput.raytraceMask = gRaytraceTiles[pixelPos].r < distToFocusPlane ? 1.0f : 0.0f;
-	DilatePassOutput.raytraceMask = raytraceTile;
+	DilatePassOutput.raytraceMask = float4(raytraceTile, max_coc_RT, 0.0f, 1.0f);
 	return DilatePassOutput;
 }
