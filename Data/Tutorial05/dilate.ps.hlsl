@@ -1,5 +1,4 @@
 Texture2D<float4>   gTiles;
-Texture2D<float4>   gRaytraceTiles;
 
 cbuffer textureParametersCB
 {
@@ -54,11 +53,11 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 				* (nearestForegroundZ > 0.0f && gTiles[uint2(i, j)].a < nearestForegroundZ)
 				+ gTiles[uint2(i, j)].a * (nearestForegroundZ == 0.0f));
 
-			raytraceTile = raytraceTile || gRaytraceTiles[uint2(i, j)].r > 0.0f;
+			//raytraceTile = raytraceTile || gRaytraceTiles[uint2(i, j)].r > 0.0f;
 		}
 	}
 
 	DilatePassOutput.dilatedTiles = float4(maxBackgroundCOC, nearestBackgroundZ, maxForegroundCOC, nearestForegroundZ);
-	DilatePassOutput.raytraceMask = float4(raytraceTile, maxForegroundCOC, 0.0f, 1.0f);
+	DilatePassOutput.raytraceMask = float4(nearestForegroundZ, maxForegroundCOC, 0.0f, 1.0f);
 	return DilatePassOutput;
 }

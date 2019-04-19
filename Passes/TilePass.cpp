@@ -52,7 +52,6 @@ bool TilePass::initialize(RenderContext::SharedPtr pRenderContext, ResourceManag
 	Falcor::logWarning(std::string("INITIALIZATION - VIEWPORT HEIGHT = ") + std::to_string(mpResManager->getHeight()));
 
 	mpResManager->requestTextureResource("Tiles", ResourceFormat::RGBA16Float,(Falcor::Resource::BindFlags)112U, width / 20 , height / 20); //specifying size seems to work well
-	mpResManager->requestTextureResource("RaytraceTiles", ResourceFormat::RG16Float,(Falcor::Resource::BindFlags)112U, width / 20 , height / 20); //specifying size seems to work well
 	mpResManager->requestTextureResource("Dilate", ResourceFormat::RGBA16Float,(Falcor::Resource::BindFlags)112U, width / 20 , height / 20); 
 	mpResManager->requestTextureResource("RaytraceMask", ResourceFormat::RG16Float,(Falcor::Resource::BindFlags)112U, width / 20 , height / 20);  
 
@@ -106,23 +105,17 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	Falcor::logWarning(std::string(" CAMERA SETTINGS ARE ") + std::to_string(mpScene->getActiveCamera()->getFarPlane()));
 	Falcor::logWarning(std::string("INITIALIZATION - VIEWPORT WIDTH = ") + std::to_string(mpResManager->getWidth()));
 	Falcor::logWarning(std::string("INITIALIZATION - VIEWPORT HEIGHT = ") + std::to_string(mpResManager->getHeight()));
-
-	// Get our output buffer; clear it to black.
-	//Texture::SharedPtr outputTexture = mpResManager->getClearedTexture("Tiles", vec4(0.0f, 0.0f, 0.0f, 0.0f));
-	//Texture::SharedPtr fullResZBuffer = mpResManager->getTexture("Z-Buffer");
+	
+	//########################  First pass -> Tile pass  ########################################
 	Texture::SharedPtr ZBuffer = mpResManager->getTexture("ZBuffer");
-	// If our input texture is invalid, or we've been asked to skip accumulation, do nothing.
 	if (!ZBuffer) return;
 
-	Fbo::SharedPtr outputFbo = mpResManager->createManagedFbo({"Tiles", "RaytraceTiles" }, "Z-Buffer2");
-	// Failed to create a valid FBO?  We're done.
+	Fbo::SharedPtr outputFbo = mpResManager->createManagedFbo({"Tiles"}, "Z-Buffer2");
 	if (!outputFbo) return;
-	// Clear our color buffers to background color, depth to 1, stencil to 0
 	pRenderContext->clearFbo(outputFbo.get(), vec4(0.0f, 0.0f, 0.0f, 1.0f), 1.0f, 0);
 
 	// Set shader parameters for our accumulation pass
 	auto shaderVars = mpTilingShader->getVars();
-	
 	shaderVars["gZBuffer"] = ZBuffer;
 	shaderVars["cameraParametersCB"]["gFocalLength"] = mFocalLength;
 	shaderVars["cameraParametersCB"]["gDistanceToFocalPlane"] = mDistFocalPlane;
@@ -130,11 +123,7 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	shaderVars["cameraParametersCB"]["gSensorWidth"] = mSensorWidth;
 	shaderVars["cameraParametersCB"]["gTextureWidth"] = (float)mpResManager->getWidth();
 
-
-	// ------------- my stuff ---------------
 	mpGfxState->setFbo(outputFbo);
-	//---------------------------------------
-	// Execute the accumulation shader
 	mpTilingShader->execute(pRenderContext, mpGfxState);
 
 	//########################  Second pass -> dilate pass  ########################################
@@ -145,12 +134,8 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	Texture::SharedPtr tiles = mpResManager->getTexture("Tiles");
 	if (!tiles) return;
 
-	Texture::SharedPtr raytraceTiles = mpResManager->getTexture("RaytraceTiles");
-	if (!tiles) return;
-
 	auto dilateShaderVars = mpDilateShader->getVars();
 	dilateShaderVars["gTiles"] = tiles;
-	dilateShaderVars["gRaytraceTiles"] = raytraceTiles;
 	dilateShaderVars["textureParametersCB"]["width"] = (int)mpResManager->getWidth() / 20;
 	dilateShaderVars["textureParametersCB"]["height"] = (int)mpResManager->getHeight() / 20;
 	dilateShaderVars["textureParametersCB"]["distToFocusPlane"] = mDistFocalPlane;
