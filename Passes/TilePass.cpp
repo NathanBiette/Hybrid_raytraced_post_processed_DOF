@@ -54,12 +54,12 @@ bool TilePass::initialize(RenderContext::SharedPtr pRenderContext, ResourceManag
 	mpResManager->requestTextureResource("Tiles", ResourceFormat::RG16Float,(Falcor::Resource::BindFlags)112U, width / 20 , height / 20); //specifying size seems to work well
 	mpResManager->requestTextureResource("RaytraceTiles", ResourceFormat::RG16Float,(Falcor::Resource::BindFlags)112U, width / 20 , height / 20); //specifying size seems to work well
 	mpResManager->requestTextureResource("Dilate", ResourceFormat::RG16Float,(Falcor::Resource::BindFlags)112U, width / 20 , height / 20); 
-	mpResManager->requestTextureResource("RaytraceMask", ResourceFormat::RG16Float,(Falcor::Resource::BindFlags)112U, width / 20 , height / 20); 
-	mpResManager->requestTextureResource("RaytraceMask2", ResourceFormat::R16Float,(Falcor::Resource::BindFlags)112U, width / 2 , height / 2); 
+	mpResManager->requestTextureResource("RaytraceMask", ResourceFormat::RG16Float,(Falcor::Resource::BindFlags)112U, width / 20 , height / 20);  
 
 	mpResManager->requestTextureResource("Half_res_color", ResourceFormat::RGBA16Float,(Falcor::Resource::BindFlags)112U, width / 2 , height / 2);
 	mpResManager->requestTextureResource("Presort_buffer", ResourceFormat::RGBA16Float,(Falcor::Resource::BindFlags)112U, width / 2 , height / 2);
 	mpResManager->requestTextureResource("Half_res_z_buffer", ResourceFormat::R32Float, (Falcor::Resource::BindFlags)112U, width / 2, height / 2);
+	mpResManager->requestTextureResource("RaytraceMask2", ResourceFormat::RG16Float, (Falcor::Resource::BindFlags)112U, width / 2, height / 2);
 
 	mpResManager->requestTextureResource("Half_res_far_field", ResourceFormat::RGBA16Float, (Falcor::Resource::BindFlags)112U, width / 2, height / 2);
 	mpResManager->requestTextureResource("Half_res_near_field", ResourceFormat::RGBA16Float, (Falcor::Resource::BindFlags)112U, width / 2, height / 2);
@@ -205,7 +205,7 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	mpDownPresortShader->execute(pRenderContext, mpGfxState);
 
 	//########################  Fourth pass -> main pass  ########################################
-	Fbo::SharedPtr outputFbo4 = mpResManager->createManagedFbo({ "Half_res_far_field", "Half_res_near_field", "Half_res_raytrace_far_field", "RaytraceMask2" }, "Z-Buffer2");
+	Fbo::SharedPtr outputFbo4 = mpResManager->createManagedFbo({ "Half_res_far_field", "Half_res_near_field", "RaytraceMask2" }, "Z-Buffer2");
 	if (!outputFbo) return;
 	pRenderContext->clearFbo(outputFbo4.get(), vec4(0.0f, 0.0f, 0.0f, 0.0f), 1.0f, 0);
 
