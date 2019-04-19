@@ -72,7 +72,7 @@ void CompositePass::execute(RenderContext::SharedPtr pRenderContext)
 	if (!ZBuffer) return;
 	Texture::SharedPtr farFieldBuffer = mpResManager->getTexture("Half_res_far_field");
 	if (!farFieldBuffer) return;
-	Texture::SharedPtr nearFieldBuffer = mpResManager->getTexture("Half_res_near_field");
+	Texture::SharedPtr nearFieldBuffer = mpResManager->getTexture("Half_res_raytrace_near_field");
 	if (!nearFieldBuffer) return;
 	Texture::SharedPtr raytraceFarFieldBuffer = mpResManager->getTexture("Half_res_raytrace_far_field");
 	if (!raytraceFarFieldBuffer) return;

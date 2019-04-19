@@ -63,6 +63,7 @@ bool TilePass::initialize(RenderContext::SharedPtr pRenderContext, ResourceManag
 
 	mpResManager->requestTextureResource("Half_res_far_field", ResourceFormat::RGBA16Float, (Falcor::Resource::BindFlags)112U, width / 2, height / 2);
 	mpResManager->requestTextureResource("Half_res_near_field", ResourceFormat::RGBA16Float, (Falcor::Resource::BindFlags)112U, width / 2, height / 2);
+	mpResManager->requestTextureResource("Half_res_raytrace_near_field", ResourceFormat::RGBA16Float, (Falcor::Resource::BindFlags)112U, width / 2, height / 2);
 	mpResManager->requestTextureResource("Half_res_raytrace_far_field", ResourceFormat::RGBA16Float, (Falcor::Resource::BindFlags)112U, width / 2, height / 2);
 
 	mpResManager->requestTextureResource("Z-Buffer2", ResourceFormat::D24UnormS8, ResourceManager::kDepthBufferFlags);

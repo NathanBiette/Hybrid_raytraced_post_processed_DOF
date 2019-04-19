@@ -75,7 +75,7 @@ void RaytracePass::execute(RenderContext::SharedPtr pRenderContext)
 	if (!mpRays || !mpRays->readyToRender()) return;
 
 	Texture::SharedPtr farFieldBuffer = mpResManager->getTexture("Half_res_far_field");
-	Texture::SharedPtr nearFieldBuffer = mpResManager->getTexture("Half_res_near_field");
+	Texture::SharedPtr nearFieldBuffer = mpResManager->getTexture("Half_res_raytrace_near_field");
 	Texture::SharedPtr raytraceFarFieldBuffer = mpResManager->getTexture("Half_res_raytrace_far_field");
 	Texture::SharedPtr halfResZBuffer = mpResManager->getTexture("Half_res_z_buffer");
 	//Texture::SharedPtr edgeDilateBuffer = mpResManager->getTexture("Edge_dilate_buffer");
