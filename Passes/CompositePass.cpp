@@ -78,7 +78,7 @@ void CompositePass::execute(RenderContext::SharedPtr pRenderContext)
 	if (!raytraceNearFieldBuffer) return;
 	Texture::SharedPtr raytraceFarFieldBuffer = mpResManager->getTexture("Half_res_raytrace_far_field");
 	if (!raytraceFarFieldBuffer) return;
-	Texture::SharedPtr raytraceMask = mpResManager->getTexture("RaytraceMask");
+	Texture::SharedPtr raytraceMask = mpResManager->getTexture("RaytraceMask2");
 	if (!raytraceMask) return;
 	Texture::SharedPtr fullResBuffer = mpResManager->getTexture("FrameColor");
 	if (!fullResBuffer) return;

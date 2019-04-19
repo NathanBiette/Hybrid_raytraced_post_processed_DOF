@@ -182,7 +182,8 @@ cbuffer RayGenCB
 [shader("raygeneration")]
 void GBufferRayGen()
 {
-	if (gRaytraceMask[uint2(DispatchRaysIndex().x / 10, DispatchRaysIndex().y / 10)].r > 0.01f ) {
+	//if (gRaytraceMask[uint2(DispatchRaysIndex().x / 10, DispatchRaysIndex().y / 10)].r > 0.0f ) {
+	if (gRaytraceMask[uint2(DispatchRaysIndex().x, DispatchRaysIndex().y)].r > 0.0f ) {
 
 		// Get our pixel's position on the screen
 		uint2 launchIndex = DispatchRaysIndex();
