@@ -192,38 +192,23 @@ void GBufferRayGen()
 		float2 pixelCenter = (launchIndex + gPixelJitter) / launchDim;
 		float2 ndc = float2(2, -2) * pixelCenter + float2(-1, 1);
 		float3 rayDir = ndc.x * gCamera.cameraU + ndc.y * gCamera.cameraV + gCamera.cameraW;
-		//float3 rayDir = ndc.x * gCamera.cameraU * (gSensorWidth / 2.0f) / (length(gCamera.cameraU)) + ndc.y * gCamera.cameraV * (gSensorHeight/2.0f) / (length(gCamera.cameraV)) + gCamera.cameraW * gSensorDepth * 0.985f / length(gCamera.cameraW);
-		//0.5 * (0.105263 / 2) / norm of U 
-		//float3 rayDir = ndc.x * gCamera.cameraU * gSensorWidth / (length(gCamera.cameraU)) + ndc.y * gCamera.cameraV * gSensorHeight / (length(gCamera.cameraV)) + gCamera.cameraW * gSensorDepth * 0.674f / length(gCamera.cameraW);
-
-		// Find the focal point for this pixel.
-		rayDir /= length(gCamera.cameraW);                     // Make ray have length 1 along the camera's w-axis.
-		//rayDir /= gSensorDepth;                     // Make ray have length 1 along the camera's w-axis.
 		
-		//float3 rayDir = gCamera.cameraU * ndc.x / length(gCamera.cameraU) + gCamera.cameraV * ndc.y * 9.0f / ( 16.0f * length(gCamera.cameraV)) + gCamera.cameraW  / length(gCamera.cameraW);
-
-
+		// Find the focal point for this pixel.
+		rayDir /= length(gCamera.cameraW);						// Make ray have length 1 along the camera's w-axis.
 		float3 focalPoint = gCamera.posW + gPlaneDist * rayDir; // Select point on ray a distance to focus plane along the w-axis
 
-																// Initialize a random number generator
+		// Initialize a random number generator
 		uint randSeed = initRand(launchIndex.x + launchIndex.y * launchDim.x, gFrameCount, 16);
 
 		float4 accumColorNear = float4(0.0f, 0.0f, 0.0f, 1.0f);
 		float4 accumColorFar = float4(0.0f, 0.0f, 0.0f, 1.0f);
 		uint numHits = 0;
-		//shoot many rays
 
+		// Shoot many rays
 		for (int i = 0; i < gNumRays; i++) {
 			// Get random numbers (in polar coordinates), convert to random cartesian uv on the lens
 			float2 rnd = float2(2.0f * 3.14159265f * nextRand(randSeed), gLensRadius * nextRand(randSeed));
-			//float2 uv = float2(cos(rnd.x) * rnd.y, sin(rnd.x) * rnd.y);
-
-			// Use uv coordinate to compute a random origin on the camera lens
-			//float3 randomOrig = gCamera.posW + uv.x * normalize(gCamera.cameraU) + uv.y * normalize(gCamera.cameraV);
-
-
 			float2 uv = float2( 2.0f * haltonX[i] - 1.0f + (nextRand(randSeed) - 0.5f) * 0.25f, (-2.0f) * haltonY[i] + 1.0f + (nextRand(randSeed) - 0.5f) * 0.25f);
-			//float2 uv = float2(2.0f * haltonX[i] - 1.0f, -2.0f * haltonY[i] + 1.0f);
 			uv = uv * gLensRadius;
 
 			float3 randomOrig = gCamera.posW + uv.x * normalize(gCamera.cameraU) + uv.y * normalize(gCamera.cameraV);
@@ -250,11 +235,7 @@ void GBufferRayGen()
 				rayData);                             // Our user-defined ray payload structure to store intermediate results
 		
 			if (rayData.ZValue < gPlaneDist) {
-			//if (rayData.ZValue == 0.0f) {
-			//if (gViewMatrix[0][0] < 0.0f) {
 				accumColorNear += rayData.colorValue;
-				//float zNormalized = rayData.ZValue / gPlaneDist;
-				//accumColorNear += float4(zNormalized, zNormalized, 0.0f, 1.0f);
 				numHits++;
 			}
 			else {
@@ -263,18 +244,6 @@ void GBufferRayGen()
 
 			
 		}
-		//gColorForeground[launchIndex] = float4(accumColorNear.rgb / (float)numHits, (float)numHits/(float)gNumRays);
-		/*
-		if (numHits > 0) {
-			if (gZBuffer[launchIndex].x > gPlaneDist) {
-				gColorForeground[launchIndex] = float4(accumColorNear.rgb / (float)numHits, 1.0f) * (float)numHits / (float)gNumRays + gColorForeground[launchIndex] * (1.0f - (float)numHits / (float)gNumRays);
-			}
-			else {
-				gColorForeground[launchIndex] = float4((accumColorNear.rgb + accumColorFar.rgb) / (float)gNumRays, 1.0f);
-			}
-			
-		}*/
-		//gColorForeground[launchIndex] = float4((accumColorNear.rgb + accumColorFar.rgb) / (float)gNumRays, 1.0f);
 		
 		// If at least one foreground hit, store near color with semi transparency in alpha
 		if (numHits > 0) {
@@ -344,13 +313,6 @@ void PrimaryClosestHit(inout ColorRayPayload rayData, BuiltinIntersectionAttribs
 	}
 
 	rayData.colorValue = colorAccum;
-	//rayData.ZValue = 2 * gCamera.farZ * gCamera.nearZ / (gCamera.farZ + gCamera.nearZ - (gCamera.farZ - gCamera.nearZ) * (2 * (vsOut.posH.z / vsOut.posH.w) - 1.0f));
-	//rayData.ZValue = 2 * gCamera.farZ * gCamera.nearZ / (gCamera.farZ + gCamera.nearZ - (gCamera.farZ - gCamera.nearZ) * (2 * mul(gCamera.viewProjMat, float4(shadeData.posW, 1.0f)).z - 1.0f));
-	//rayData.ZValue = vsOut.posH.z / vsOut.posH.w;
-	//rayData.ZValue = mul(gCamera.viewMat, float4(vsOut.posW, 1.0f)).z;
-	//rayData.ZValue = mul(float4(vsOut.posW, 1.0f), gViewMatrix).z;
-	//rayData.ZValue = vsOut.posW.z;
 	rayData.ZValue = dot( (shadeData.posW - gCamera.posW), gCamera.cameraW / length(gCamera.cameraW) );
 	
-	//rayData.ZValue = (shadeData.posW - gCamera.posW).x;
 }

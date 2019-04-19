@@ -40,7 +40,6 @@ bool RaytracePass::initialize(RenderContext::SharedPtr pRenderContext, ResourceM
 	int32_t height = 1080;
 	
 	mpResManager = pResManager;
-	//mpResManager->requestTextureResource("Half_res_raytrace_color", ResourceFormat::RGBA16Float, (Falcor::Resource::BindFlags)112U, width / 2, height / 2);
 	
 	// Set the default scene to load
 	mpResManager->setDefaultSceneName("Data/pink_room/pink_room.fscene");
@@ -78,18 +77,11 @@ void RaytracePass::execute(RenderContext::SharedPtr pRenderContext)
 	Texture::SharedPtr nearFieldBuffer = mpResManager->getTexture("Half_res_raytrace_near_field");
 	Texture::SharedPtr raytraceFarFieldBuffer = mpResManager->getTexture("Half_res_raytrace_far_field");
 	Texture::SharedPtr halfResZBuffer = mpResManager->getTexture("Half_res_z_buffer");
-	//Texture::SharedPtr edgeDilateBuffer = mpResManager->getTexture("Edge_dilate_buffer");
 	Texture::SharedPtr raytraceMask = mpResManager->getTexture("RaytraceMask");
 
 	// Pass our background color down to our miss shader
 	auto missVars = mpRays->getMissVars(0);
 	missVars["MissShaderCB"]["gBgColor"] = mBgColor;
-
-	// Cycle through all geometry instances, bind our g-buffer outputs to the hit shaders for each instance
-	//for (auto pVars : mpRays->getHitVars(0))
-	//{
-	//	pVars["gColor"] = farFieldBuffer;
-	//}
 
 	// Pass our camera parameters to the ray generation shader
 	auto rayGenVars = mpRays->getRayGenVars();
@@ -102,7 +94,6 @@ void RaytracePass::execute(RenderContext::SharedPtr pRenderContext)
 	rayGenVars["RayGenCB"]["gPlaneDist"] = mDistFocalPlane;
 	rayGenVars["RayGenCB"]["gSensorWidth"] = mSensorWidth;
 	rayGenVars["RayGenCB"]["gSensorHeight"] = mSensorWidth * 9.0f / 16.0f;
-//	rayGenVars["RayGenCB"]["gSensorDepth"] = 1.0f / (1.0f/ 0.05f - 1.0f / mDistFocalPlane);
 	rayGenVars["RayGenCB"]["gSensorDepth"] = mDistFocalPlane * mFocalLength / (mDistFocalPlane - mFocalLength);
 	rayGenVars["RayGenCB"]["gFrameCount"] = mFrameCount++;
 	rayGenVars["RayGenCB"]["gNumRays"] = mNumRays;

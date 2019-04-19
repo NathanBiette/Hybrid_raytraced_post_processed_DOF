@@ -4,6 +4,7 @@ static const float FAR_RT_BLEND_TWEAK = 2.0f;
 Texture2D<float4>   gZBuffer;
 Texture2D<float4>   gFarField;
 Texture2D<float4>   gNearField;
+Texture2D<float4>   gRTNearField;
 Texture2D<float4>   gRTFarField;
 Texture2D<float4>   gRTMask;
 Texture2D<float4>   gFullResColor;
@@ -25,7 +26,6 @@ cbuffer cameraParametersCB
 	float gTextureWidth;
 	float gTextureHeight;
 	float gDistFocusPlane;
-	//float gSinglePixelRadius;
 }
 
 /*
@@ -72,27 +72,28 @@ float4 Median9(vector<float,4>[9] samples) {
 PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 {
 	PS_OUTPUT compositePassBufOut;
-	float4 farFieldSamples[9];
-	float4 nearFieldSamples[9];
+	float4 backgroundPPSamples[9];
+	float4 foregroundPPSamples[9];
+	float4 foregroundRTSamples[9];
 
 	for (int i = 0; i < 3; i++) {
 		for (int j = 0; j < 3; j++) {
-			farFieldSamples[i*3 + j] = gFarField.SampleLevel(gSampler, float2( (pos.x + 2.0f * ((float)i - 1.0f))/gTextureWidth, (pos.y + 2.0f * ((float)j - 1.0f))/gTextureHeight), 0);
+			backgroundPPSamples[i*3 + j] = gFarField.SampleLevel(gSampler, float2( (pos.x + 2.0f * ((float)i - 1.0f))/gTextureWidth, (pos.y + 2.0f * ((float)j - 1.0f))/gTextureHeight), 0);
 			if (gRTMask.SampleLevel(gSampler, texC, 0).r > 0.0f) {
-				nearFieldSamples[i * 3 + j] = gNearField.SampleLevel(gSampler, float2((pos.x + 2.0f * ((float)i - 1.0f)) / gTextureWidth, (pos.y + 2.0f * ((float)j - 1.0f)) / gTextureHeight), 0);
+				foregroundRTSamples[i * 3 + j] = gRTNearField.SampleLevel(gSampler, float2((pos.x + 2.0f * ((float)i - 1.0f)) / gTextureWidth, (pos.y + 2.0f * ((float)j - 1.0f)) / gTextureHeight), 0);
 			}
 		}
 	}
-	float4 farFieldColor = Median9(farFieldSamples);
+	float4 backgroundPPColor = Median9(backgroundPPSamples);
 	
-	float4 nearFieldColor = float4(0.0f);
+	float4 foregroundRTColor = float4(0.0f);
 	// If there was raytracing here
 	if (gRTMask.SampleLevel(gSampler, texC, 0).r > 0.0f) {
 		// get the median value to remove noise 
-		nearFieldColor = Median9(nearFieldSamples);
+		foregroundRTColor = Median9(foregroundRTSamples);
 		// and check for 0 values when at tile corner 
-		if (nearFieldColor.r == 0.0f && nearFieldColor.a == 1.0f) {
-			nearFieldColor = gNearField.SampleLevel(gSampler, texC, 0);
+		if (foregroundRTColor.r == 0.0f && foregroundRTColor.a == 1.0f) {
+			foregroundRTColor = gRTNearField.SampleLevel(gSampler, texC, 0);
 		}
 	}
 
@@ -100,39 +101,39 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	float4 focusColor = gFullResColor.SampleLevel(gSampler, texC, 0);
 	float Z = gZBuffer.SampleLevel(gSampler, texC, 0).r;
 	float farBlendFactor = saturate((Z - gFarFieldFocusLimit) / (BLENDING_TWEAK * gFarFocusZoneRange));
-	//float nearBlendFactor = saturate((gNearFieldFocusLimit - Z) / (BLENDING_TWEAK * gNearFocusZoneRange));
 
 
-	// far field -> blend between focus and not far 
 	if (Z > gFarFieldFocusLimit) {
-		//compositePassBufOut.finalImage = float4(farFieldColor.rgb, 1.0f);
-		compositePassBufOut.finalImage = float4(farBlendFactor * farFieldColor.rgb + (1.0f - farBlendFactor) * focusColor.rgb, 1.0f);
-	}// between focus plane and end of focus area -> focused sharp image
+		// Further away than focus limit, blend between focus and background
+		compositePassBufOut.finalImage = float4(farBlendFactor * backgroundPPColor.rgb + (1.0f - farBlendFactor) * focusColor.rgb, 1.0f);
+	}
 	else if(Z > gDistFocusPlane){
+		// Between focus plane and end of focus area use focused sharp image
 		compositePassBufOut.finalImage = float4(focusColor.rgb, 1.0f);
-	}// in front of focus plane -> 
+	}
 	else {
+		// In object silhouette fill in with background from ray trace
 		compositePassBufOut.finalImage = gRTFarField.SampleLevel(gSampler, texC, 0);
 	}
 
+
+	// Outside foreground object silhouette, leak RT background over PP background and composite RT foreground on top
 	if (Z > gDistFocusPlane) {
+		// If we ray traced this pixel
 		if (gRTMask.SampleLevel(gSampler, texC, 0).r > 0.0f) {
 			// Leak raytrace background into post processed background to get smooth transitions
-			float farBlendFactor = saturate(gNearField.SampleLevel(gSampler, texC, 0).a * FAR_RT_BLEND_TWEAK);
+			float farBlendFactor = saturate(gRTNearField.SampleLevel(gSampler, texC, 0).a * FAR_RT_BLEND_TWEAK);
 			compositePassBufOut.finalImage = float4(farBlendFactor * gRTFarField.SampleLevel(gSampler, texC, 0).rgb + (1.0f - farBlendFactor) * compositePassBufOut.finalImage.rgb, 1.0f);
 			
 			// Composite semi-transparent RT foreground on top 
-			//float nearBlendFactor = saturate(gNearField.SampleLevel(gSampler, texC, 0).a);
-			float nearBlendFactor = saturate(nearFieldColor.a);
-			//compositePassBufOut.finalImage = float4(nearBlendFactor * gNearField.SampleLevel(gSampler, texC, 0).rgb + (1.0f - nearBlendFactor) * compositePassBufOut.finalImage.rgb, 1.0f);
-			compositePassBufOut.finalImage = float4(nearBlendFactor * nearFieldColor.rgb + (1.0f - nearBlendFactor) * compositePassBufOut.finalImage.rgb, 1.0f);
+			float nearBlendFactor = saturate(foregroundRTColor.a);
+			compositePassBufOut.finalImage = float4(nearBlendFactor * foregroundRTColor.rgb + (1.0f - nearBlendFactor) * compositePassBufOut.finalImage.rgb, 1.0f);
 		}
 	}
+	// Inside object silhouette, composite RT foreground on top of RT background
 	else {
-		//float nearBlendFactor = saturate(gNearField.SampleLevel(gSampler, texC, 0).a);
-		float nearBlendFactor = saturate(nearFieldColor.a);
-		//compositePassBufOut.finalImage = float4(nearBlendFactor * gNearField.SampleLevel(gSampler, texC, 0).rgb + (1.0f - nearBlendFactor) * compositePassBufOut.finalImage.rgb, 1.0f);
-		compositePassBufOut.finalImage = float4(nearBlendFactor * nearFieldColor.rgb + (1.0f - nearBlendFactor) * compositePassBufOut.finalImage.rgb, 1.0f);
+		float nearBlendFactor = saturate(foregroundRTColor.a);
+		compositePassBufOut.finalImage = float4(nearBlendFactor * foregroundRTColor.rgb + (1.0f - nearBlendFactor) * compositePassBufOut.finalImage.rgb, 1.0f);
 	}
 
 
