@@ -1,4 +1,5 @@
 static const float EDGE_RANGE = 0.01f;
+static const float NORM_RANGE = 0.1f;
 
 Texture2D<float4>   gZBuffer;
 
@@ -32,6 +33,10 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	float closestZForeground = gZBuffer[uint2(pixelPos.x * 20, pixelPos.y * 20)].r;
 	float furthestZForeground = gZBuffer[uint2(pixelPos.x * 20, pixelPos.y * 20)].r;
 
+	/*try something with normals*/
+	float3 minNorm = gZBuffer[uint2(pixelPos.x * 20, pixelPos.y * 20)].gba;
+	float3 maxNorm = gZBuffer[uint2(pixelPos.x * 20, pixelPos.y * 20)].gba;
+
 	for (int x = pixelPos.x * 20; x < pixelPos.x * 20 + 20; x++) {
 		for (int y = pixelPos.y * 20; y < pixelPos.y * 20 + 20; y++) {
 
@@ -54,14 +59,20 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 			furthestZForeground = max(furthestZForeground, gZBuffer[uint2(x, y)].r);
 			foregroundSampled = foregroundSampled | (gZBuffer[uint2(x, y)].r <= gDistanceToFocalPlane);
 
+			minNorm = float3(min(minNorm.r, gZBuffer[uint2(x, y)].g), min(minNorm.g, gZBuffer[uint2(x, y)].b), min(minNorm.b, gZBuffer[uint2(x, y)].a));
+			maxNorm = float3(max(maxNorm.r, gZBuffer[uint2(x, y)].g), max(maxNorm.g, gZBuffer[uint2(x, y)].b), max(maxNorm.b, gZBuffer[uint2(x, y)].a));
+
 		}
 	}
 
 	// Pack in one texture (max COC background, nearest Z in tile background, max COC foreground, nearest Z in tile foreground)
 	TilePassOutput.Tiles = float4(maxBackgroundCOC, nearestBackgroundZ, maxForegroundCOC, nearestForegroundZ);
+	
 	// Decide to raytrace or not if foreground edge is deep enough
-	bool tileToBeRaytraced = ((furthestZForeground - closestZForeground) > EDGE_RANGE) && foregroundSampled;
-	TilePassOutput.EdgeMask = float4((float)(tileToBeRaytraced), min(closestZForeground + EDGE_RANGE, gDistanceToFocalPlane) * (float)tileToBeRaytraced, 0.0f, 1.0f);
+	//bool tileToBeRaytraced = ((furthestZForeground - closestZForeground) > EDGE_RANGE) && foregroundSampled;
+	bool tileToBeRaytraced = (length(maxNorm - minNorm) > NORM_RANGE) && foregroundSampled;
+	//TilePassOutput.EdgeMask = float4((float)(tileToBeRaytraced), min(closestZForeground + EDGE_RANGE, gDistanceToFocalPlane) * (float)tileToBeRaytraced, 0.0f, 1.0f);
+	TilePassOutput.EdgeMask = float4((float)(tileToBeRaytraced), length(maxNorm - minNorm) * (float)tileToBeRaytraced, 0.0f, 1.0f);
 	return TilePassOutput;
 }
 

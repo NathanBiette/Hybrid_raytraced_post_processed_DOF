@@ -59,7 +59,7 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	}
 
 	DilatePassOutput.dilatedTiles = float4(maxBackgroundCOC, nearestBackgroundZ, maxForegroundCOC, nearestForegroundZ);
-	//DilatePassOutput.raytraceMask = float4(raytraceTile, closestZEdgeLimit, 0.0f, 1.0f);
-	DilatePassOutput.raytraceMask = float4(nearestForegroundZ, closestZEdgeLimit, 0.0f, 1.0f);
+	DilatePassOutput.raytraceMask = float4(raytraceTile, closestZEdgeLimit, 0.0f, 1.0f);
+	//DilatePassOutput.raytraceMask = float4(nearestForegroundZ, closestZEdgeLimit, 0.0f, 1.0f);
 	return DilatePassOutput;
 }
