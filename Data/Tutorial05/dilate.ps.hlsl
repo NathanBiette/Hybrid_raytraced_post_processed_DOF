@@ -1,4 +1,5 @@
 Texture2D<float4>   gTiles;
+Texture2D<float4>   gEdgeMask;
 
 cbuffer textureParametersCB
 {
@@ -22,7 +23,7 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	float maxForegroundCOC = 0.0f;
 	float nearestBackgroundZ = 0.0f;
 	float nearestForegroundZ = 0.0f;
-	bool raytraceTile = false;
+	float raytraceTile = 0.0f;
 
 	// Handle image border during sampling
 	int startX = 0 + (pixelPos.x > 0) * (pixelPos.x - 1);
@@ -46,10 +47,12 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 				* ((gTiles[uint2(i, j)].a - nearestForegroundZ)
 				* (nearestForegroundZ > 0.0f && gTiles[uint2(i, j)].a < nearestForegroundZ)
 				+ gTiles[uint2(i, j)].a * (nearestForegroundZ == 0.0f));
+			
+			raytraceTile = max(raytraceTile, gEdgeMask[uint2(i, j)].r);
 		}
 	}
 
 	DilatePassOutput.dilatedTiles = float4(maxBackgroundCOC, nearestBackgroundZ, maxForegroundCOC, nearestForegroundZ);
-	DilatePassOutput.raytraceMask = float4(nearestForegroundZ, maxForegroundCOC, 0.0f, 1.0f);
+	DilatePassOutput.raytraceMask = float4(raytraceTile, 0.0f, 0.0f, 1.0f);
 	return DilatePassOutput;
 }

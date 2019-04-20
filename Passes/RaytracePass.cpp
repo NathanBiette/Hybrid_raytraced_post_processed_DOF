@@ -77,7 +77,7 @@ void RaytracePass::execute(RenderContext::SharedPtr pRenderContext)
 	Texture::SharedPtr nearFieldBuffer = mpResManager->getTexture("Half_res_raytrace_near_field");
 	Texture::SharedPtr raytraceFarFieldBuffer = mpResManager->getTexture("Half_res_raytrace_far_field");
 	Texture::SharedPtr halfResZBuffer = mpResManager->getTexture("Half_res_z_buffer");
-	Texture::SharedPtr raytraceMask = mpResManager->getTexture("RaytraceMask2");
+	Texture::SharedPtr raytraceMask = mpResManager->getTexture("RaytraceMask");
 
 	// Pass our background color down to our miss shader
 	auto missVars = mpRays->getMissVars(0);

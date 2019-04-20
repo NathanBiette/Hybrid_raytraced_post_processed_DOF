@@ -53,6 +53,7 @@ bool TilePass::initialize(RenderContext::SharedPtr pRenderContext, ResourceManag
 
 	mpResManager->requestTextureResource("Tiles", ResourceFormat::RGBA16Float,(Falcor::Resource::BindFlags)112U, width / 20 , height / 20); //specifying size seems to work well
 	mpResManager->requestTextureResource("Dilate", ResourceFormat::RGBA16Float,(Falcor::Resource::BindFlags)112U, width / 20 , height / 20); 
+	mpResManager->requestTextureResource("EdgeMask", ResourceFormat::RG16Float,(Falcor::Resource::BindFlags)112U, width / 20 , height / 20);  
 	mpResManager->requestTextureResource("RaytraceMask", ResourceFormat::RG16Float,(Falcor::Resource::BindFlags)112U, width / 20 , height / 20);  
 
 	mpResManager->requestTextureResource("Half_res_color", ResourceFormat::RGBA16Float,(Falcor::Resource::BindFlags)112U, width / 2 , height / 2);
@@ -110,7 +111,7 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	Texture::SharedPtr ZBuffer = mpResManager->getTexture("ZBuffer");
 	if (!ZBuffer) return;
 
-	Fbo::SharedPtr outputFbo = mpResManager->createManagedFbo({"Tiles"}, "Z-Buffer2");
+	Fbo::SharedPtr outputFbo = mpResManager->createManagedFbo({"Tiles", "EdgeMask"}, "Z-Buffer2");
 	if (!outputFbo) return;
 	pRenderContext->clearFbo(outputFbo.get(), vec4(0.0f, 0.0f, 0.0f, 1.0f), 1.0f, 0);
 
@@ -133,9 +134,12 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 
 	Texture::SharedPtr tiles = mpResManager->getTexture("Tiles");
 	if (!tiles) return;
+	Texture::SharedPtr edgeMask = mpResManager->getTexture("EdgeMask");
+	if (!edgeMask) return;
 
 	auto dilateShaderVars = mpDilateShader->getVars();
 	dilateShaderVars["gTiles"] = tiles;
+	dilateShaderVars["gEdgeMask"] = edgeMask;
 	dilateShaderVars["textureParametersCB"]["width"] = (int)mpResManager->getWidth() / 20;
 	dilateShaderVars["textureParametersCB"]["height"] = (int)mpResManager->getHeight() / 20;
 	dilateShaderVars["textureParametersCB"]["distToFocusPlane"] = mDistFocalPlane;
