@@ -24,6 +24,7 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	float nearestBackgroundZ = 0.0f;
 	float nearestForegroundZ = 0.0f;
 	float raytraceTile = 0.0f;
+	float closestZEdgeLimit = 0.0f;
 
 	// Handle image border during sampling
 	int startX = 0 + (pixelPos.x > 0) * (pixelPos.x - 1);
@@ -49,10 +50,16 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 				+ gTiles[uint2(i, j)].a * (nearestForegroundZ == 0.0f));
 			
 			raytraceTile = max(raytraceTile, gEdgeMask[uint2(i, j)].r);
+
+			closestZEdgeLimit += (gEdgeMask[uint2(i, j)].g > 0.0f)
+				* ((gEdgeMask[uint2(i, j)].g - closestZEdgeLimit)
+				* (closestZEdgeLimit > 0.0f && gEdgeMask[uint2(i, j)].g < closestZEdgeLimit)
+				+ gEdgeMask[uint2(i, j)].g * (closestZEdgeLimit == 0.0f));
 		}
 	}
 
 	DilatePassOutput.dilatedTiles = float4(maxBackgroundCOC, nearestBackgroundZ, maxForegroundCOC, nearestForegroundZ);
-	DilatePassOutput.raytraceMask = float4(raytraceTile, 0.0f, 0.0f, 1.0f);
+	//DilatePassOutput.raytraceMask = float4(raytraceTile, closestZEdgeLimit, 0.0f, 1.0f);
+	DilatePassOutput.raytraceMask = float4(nearestForegroundZ, closestZEdgeLimit, 0.0f, 1.0f);
 	return DilatePassOutput;
 }

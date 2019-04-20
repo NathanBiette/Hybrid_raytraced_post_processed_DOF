@@ -185,6 +185,8 @@ void GBufferRayGen()
 	if (gRaytraceMask[uint2(DispatchRaysIndex().x / 10, DispatchRaysIndex().y / 10)].r > 0.0f ) {
 	//if (gRaytraceMask[uint2(DispatchRaysIndex().x, DispatchRaysIndex().y)].r > 0.0f ) {
 
+		float ZEdgeLimit = gRaytraceMask[uint2(DispatchRaysIndex().x / 10, DispatchRaysIndex().y / 10)].g;
+
 		// Get our pixel's position on the screen
 		uint2 launchIndex = DispatchRaysIndex();
 		uint2 launchDim = DispatchRaysDimensions();
@@ -203,7 +205,8 @@ void GBufferRayGen()
 
 		float4 accumColorNear = float4(0.0f, 0.0f, 0.0f, 1.0f);
 		float4 accumColorFar = float4(0.0f, 0.0f, 0.0f, 1.0f);
-		uint numHits = 0;
+		uint numForegroundHits = 0;
+		uint numForegroundNearHits = 0;
 
 		// Shoot many rays
 		for (int i = 0; i < gNumRays; i++) {
@@ -235,9 +238,12 @@ void GBufferRayGen()
 				ray,                                  // Data structure describing the ray to trace
 				rayData);                             // Our user-defined ray payload structure to store intermediate results
 		
-			if (rayData.ZValue < gPlaneDist) {
+			if (rayData.ZValue <= gPlaneDist) {
 				accumColorNear += rayData.colorValue;
-				numHits++;
+				numForegroundHits++;
+				if (rayData.ZValue <= ZEdgeLimit) {
+					numForegroundNearHits++;
+				}
 			}
 			else {
 				accumColorFar += rayData.colorValue;
@@ -247,21 +253,27 @@ void GBufferRayGen()
 		}
 		
 		// If at least one foreground hit, store near color with semi transparency in alpha
-		if (numHits > 0) {
-			gColorForeground[launchIndex] = float4(accumColorNear.rgb / (float)numHits, (float)numHits / (float)gNumRays);
+		if (numForegroundHits > 0) {
+			gColorForeground[launchIndex] = float4(accumColorNear.rgb / (float)numForegroundHits, (float)numForegroundHits / (float)gNumRays);
 		}
 		// else no foreground color
 		else {
 			gColorForeground[launchIndex] = float4(0.0f, 0.0f, 0.0f, 0.0f);
 		}
 
+		
+
 		// If no hit in the far scene, no background color
-		if (numHits == gNumRays) {
-			gColorBackground[launchIndex] = float4(0.0f, 0.0f, 0.0f, 1.0f);
+		if (numForegroundHits == gNumRays) {
+			// If no rays hit the background then edge is in a foreground to foreground interaction inside foreground layer -> blend with PP
+			// Here we pass the alpha value of the PP foreground to be blended with , with the RT foreground
+			float alphaFactorInForeground = min((float)numForegroundNearHits, (float)(numForegroundHits - numForegroundNearHits)) * 2.0f / (float)numForegroundHits;
+			gColorBackground[launchIndex] = float4(0.0f, 0.0f, 0.0f, 1.0f - alphaFactorInForeground);
 		}
-		// else get background color
+		// Else get background color and use exclusively Foreground RT value to alhpha blend with background 
+		// Meaning that the alpha value of PP foreground here should be 0.0f
 		else {
-			gColorBackground[launchIndex] = float4(accumColorFar.rgb / (float)(gNumRays - numHits), 1.0f);
+			gColorBackground[launchIndex] = float4(accumColorFar.rgb / (float)(gNumRays - numForegroundHits), 0.0f);
 		}
 		
 

@@ -1,4 +1,4 @@
-static const float EDGE_RANGE = 0.10f;
+static const float EDGE_RANGE = 0.01f;
 
 Texture2D<float4>   gZBuffer;
 
@@ -59,7 +59,9 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 
 	// Pack in one texture (max COC background, nearest Z in tile background, max COC foreground, nearest Z in tile foreground)
 	TilePassOutput.Tiles = float4(maxBackgroundCOC, nearestBackgroundZ, maxForegroundCOC, nearestForegroundZ);
-	TilePassOutput.EdgeMask = float4((float)((furthestZForeground - closestZForeground) > EDGE_RANGE && foregroundSampled), 0.0f, 0.0f, 1.0f);
+	// Decide to raytrace or not if foreground edge is deep enough
+	bool tileToBeRaytraced = ((furthestZForeground - closestZForeground) > EDGE_RANGE) && foregroundSampled;
+	TilePassOutput.EdgeMask = float4((float)(tileToBeRaytraced), min(closestZForeground + EDGE_RANGE, gDistanceToFocalPlane) * (float)tileToBeRaytraced, 0.0f, 1.0f);
 	return TilePassOutput;
 }
 

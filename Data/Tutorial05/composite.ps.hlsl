@@ -1,4 +1,5 @@
 static const float BLENDING_TWEAK = 3.0f;
+static const float NEAR_RT_BLEND_TWEAK = 0.2f;
 static const float FAR_RT_BLEND_TWEAK = 2.0f;
 
 Texture2D<float4>   gZBuffer;
@@ -135,11 +136,18 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 			compositePassBufOut.finalImage = float4(nearBlendFactor * foregroundRTColor.rgb + (1.0f - nearBlendFactor) * compositePassBufOut.finalImage.rgb, 1.0f);
 		}
 	}
-	// Inside object silhouette, composite RT foreground on top of RT background
+	// Inside foreground object silhouette, composite RT foreground on top of RT background
 	else {
 		if (raytraced) {
+			// Transition smoothly from PP foreground to RT foreground on edges based on rays repartition between front and back layer in foreground
+			//float inForegroundBlendFactor = saturate(gRTFarField.SampleLevel(gSampler, texC, 0).a * NEAR_RT_BLEND_TWEAK);
+			//float3 foregroundColor = inForegroundBlendFactor * foregroundPPColor.rgb + (1.0f - inForegroundBlendFactor) * foregroundRTColor.rgb;
+			
+			float3 foregroundColor = foregroundRTColor.rgb;
+
+			// Composite foreground color on background colour on objects 
 			float nearBlendFactor = saturate(foregroundRTColor.a);
-			compositePassBufOut.finalImage = float4(nearBlendFactor * foregroundRTColor.rgb + (1.0f - nearBlendFactor) * compositePassBufOut.finalImage.rgb, 1.0f);
+			compositePassBufOut.finalImage = float4(nearBlendFactor * foregroundColor + (1.0f - nearBlendFactor) * compositePassBufOut.finalImage.rgb, 1.0f);
 		}
 		else {
 			compositePassBufOut.finalImage = float4(foregroundPPColor.rgb, 1.0f);
