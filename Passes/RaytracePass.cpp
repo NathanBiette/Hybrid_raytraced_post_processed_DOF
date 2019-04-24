@@ -73,7 +73,11 @@ void RaytracePass::execute(RenderContext::SharedPtr pRenderContext)
 	// Check that we're ready to render
 	if (!mpRays || !mpRays->readyToRender()) return;
 
-	Texture::SharedPtr farFieldBuffer = mpResManager->getTexture("Half_res_far_field");
+	Fbo::SharedPtr outputFbo = mpResManager->createManagedFbo({ "Half_res_raytrace_near_field", "Half_res_raytrace_far_field" }, "Z-Buffer2");
+	if (!outputFbo) return;
+	pRenderContext->clearFbo(outputFbo.get(), vec4(0.0f, 0.0f, 0.0f, 1.0f), 1.0f, 0);
+
+	//Texture::SharedPtr farFieldBuffer = mpResManager->getTexture("Half_res_far_field");
 	Texture::SharedPtr nearFieldBuffer = mpResManager->getTexture("Half_res_raytrace_near_field");
 	Texture::SharedPtr raytraceFarFieldBuffer = mpResManager->getTexture("Half_res_raytrace_far_field");
 	Texture::SharedPtr halfResZBuffer = mpResManager->getTexture("Half_res_z_buffer");
@@ -110,7 +114,7 @@ void RaytracePass::execute(RenderContext::SharedPtr pRenderContext)
 
 	// Set our shader parameters and the scene camera to use the computed jitter
 	rayGenVars["RayGenCB"]["gPixelJitter"] = vec2(xOff + 0.5f, yOff + 0.5f);
-	mpScene->getActiveCamera()->setJitter(xOff / float(farFieldBuffer->getWidth()), yOff / float(farFieldBuffer->getHeight()));
+	mpScene->getActiveCamera()->setJitter(xOff / float(raytraceFarFieldBuffer->getWidth()), yOff / float(raytraceFarFieldBuffer->getHeight()));
 
 	// Launch our ray tracing
 	mpRays->execute(pRenderContext, uvec2(mpResManager->getScreenSize().x / 2 , mpResManager->getScreenSize().y / 2));

@@ -238,7 +238,7 @@ void GBufferRayGen()
 				ray,                                  // Data structure describing the ray to trace
 				rayData);                             // Our user-defined ray payload structure to store intermediate results
 		
-			if (rayData.ZValue <= gPlaneDist) {
+			if (rayData.ZValue <= gPlaneDist + 0.001f) {
 				accumColorNear += rayData.colorValue;
 				numForegroundHits++;
 				if (rayData.ZValue <= ZEdgeLimit) {

@@ -290,7 +290,7 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	MainPassBufOut.halfResFarField = (gHalfResZBuffer[pixelPos].r > gDistanceToFocalPlane) ? 
 		float4((farBackgroundColor.rgb + nearBackgroundColor.rgb) / backgroundAlphaSpreadCmpSum, 1.0) :
 		float4(0.0f, 0.0f, 0.0f, 1.0f);
-	MainPassBufOut.halfResNearField = (gHalfResZBuffer[pixelPos].r <= gDistanceToFocalPlane) ?
+	MainPassBufOut.halfResNearField = (gHalfResZBuffer[pixelPos].r <= gDistanceToFocalPlane + 0.01f) ?
 		float4((farForegroundColor.rgb + nearForegroundColor.rgb) / foregroundAlphaSpreadCmpSum, 1.0) :
 		float4(0.0f, 0.0f, 0.0f, 1.0f);
 	MainPassBufOut.rayTraceMask = float4((float)((furthestZForeground - closestZForeground) > EDGE_RANGE && foregroundSampled), 0.0f, 0.0f, 1.0f);
