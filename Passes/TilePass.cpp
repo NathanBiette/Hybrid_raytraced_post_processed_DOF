@@ -107,8 +107,8 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	Falcor::logWarning(std::string("INITIALIZATION - VIEWPORT HEIGHT = ") + std::to_string(mpResManager->getHeight()));
 	
 	//########################  First pass -> Tile pass  ########################################
-	Texture::SharedPtr ZBuffer = mpResManager->getTexture("ZBuffer");
-	if (!ZBuffer) return;
+	Texture::SharedPtr GBuffer = mpResManager->getTexture("GBuffer");
+	if (!GBuffer) return;
 
 	Fbo::SharedPtr outputFbo = mpResManager->createManagedFbo({"Tiles", "EdgeMask"}, "Z-Buffer2");
 	if (!outputFbo) return;
@@ -116,7 +116,7 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 
 	// Set shader parameters for our accumulation pass
 	auto shaderVars = mpTilingShader->getVars();
-	shaderVars["gZBuffer"] = ZBuffer;
+	shaderVars["gGBuffer"] = GBuffer;
 	shaderVars["cameraParametersCB"]["gFocalLength"] = mFocalLength;
 	shaderVars["cameraParametersCB"]["gDistanceToFocalPlane"] = mDistFocalPlane;
 	shaderVars["cameraParametersCB"]["gAperture"] = mAperture;
@@ -155,7 +155,7 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	
 	auto downPresortShaderVars = mpDownPresortShader->getVars();
 	downPresortShaderVars["gDilate"] = dilate;
-	downPresortShaderVars["gZBuffer"] = ZBuffer;
+	downPresortShaderVars["gGBuffer"] = GBuffer;
 	downPresortShaderVars["gFrameColor"] = frameColor;
 	downPresortShaderVars["cameraParametersCB"]["gFocalLength"] = mFocalLength;
 	downPresortShaderVars["cameraParametersCB"]["gDistanceToFocalPlane"] = mDistFocalPlane;

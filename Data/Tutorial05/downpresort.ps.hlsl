@@ -3,7 +3,7 @@ static const float Z_RANGE = 0.03f; //standard deviation of Z used if Gaussian w
 static const float STRENGTH_TWEAK = 0.0f; //standard deviation of Z used if Gaussian weights computation
 
 Texture2D<float4>   gDilate;
-Texture2D<float4>   gZBuffer;
+Texture2D<float4>   gGBuffer;
 Texture2D<float4>   gFrameColor;
 
 SamplerState gSampler;
@@ -92,11 +92,11 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	uint2 pixelPos = (uint2)pos.xy;
 	PS_OUTPUT DownPresortBufOut;
 
-	float Z = gZBuffer[uint2(pixelPos.x * 2, pixelPos.y * 2)].r;
+	float Z = gGBuffer[uint2(pixelPos.x * 2, pixelPos.y * 2)].r;
 	for (int i = 0; i < 2; i++) {
 		for (int j = 0; j < 2; j++) {
-			if (gZBuffer[uint2(pixelPos.x * 2 + i, pixelPos.y * 2 + j)].r > Z) {
-				Z = gZBuffer[uint2(pixelPos.x * 2 + i, pixelPos.y * 2 + j)].r;
+			if (gGBuffer[uint2(pixelPos.x * 2 + i, pixelPos.y * 2 + j)].r > Z) {
+				Z = gGBuffer[uint2(pixelPos.x * 2 + i, pixelPos.y * 2 + j)].r;
 			}
 		}
 	}
@@ -136,7 +136,7 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 		if we sample outside, the min Z = 0 and sample doesn't count anyway
 		Gather4 takes the 4 red value used in bilinear sampling and output float4(r1,r2,r3,r4)
 		*/
-		Z4 = gZBuffer.Gather(gSampler, sampleLocation);
+		Z4 = gGBuffer.Gather(gSampler, sampleLocation);
 		sampleZ[i] = min(min(min(Z4.r, Z4.g), Z4.b), Z4.a);
 		sampleColor[i] = gFrameColor.SampleLevel(gSampler, sampleLocation, 0).rgb;
 	}

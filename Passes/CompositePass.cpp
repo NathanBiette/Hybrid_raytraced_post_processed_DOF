@@ -20,8 +20,6 @@
 namespace {
 	// Where is our shader located?
 	const char *kCompositeShader = "Tutorial05\\composite.ps.hlsl";
-	const char *kSobelShader = "Tutorial05\\sobelpass.ps.hlsl";
-	const char *kEdgeDilateShader = "Tutorial05\\edgedilate.ps.hlsl";
 };
 
 // Define our constructor methods
@@ -51,9 +49,6 @@ bool CompositePass::initialize(RenderContext::SharedPtr pRenderContext, Resource
 	// Create our graphics state and an tiling shader
 	mpGfxState = GraphicsState::create();
 	mpCompositeShader = FullscreenLaunch::create(kCompositeShader);
-	mpSobelShader = FullscreenLaunch::create(kSobelShader);
-	mpEdgeDilateShader = FullscreenLaunch::create(kEdgeDilateShader);
-
 	return true;
 }
 
@@ -66,8 +61,8 @@ void CompositePass::initScene(RenderContext::SharedPtr pRenderContext, Scene::Sh
 
 void CompositePass::execute(RenderContext::SharedPtr pRenderContext)
 {
-	Texture::SharedPtr ZBuffer = mpResManager->getTexture("ZBuffer");
-	if (!ZBuffer) return;
+	Texture::SharedPtr GBuffer = mpResManager->getTexture("GBuffer");
+	if (!GBuffer) return;
 	Texture::SharedPtr farFieldBuffer = mpResManager->getTexture("Half_res_far_field");
 	if (!farFieldBuffer) return;
 	Texture::SharedPtr nearFieldBuffer = mpResManager->getTexture("Half_res_near_field");
@@ -87,7 +82,7 @@ void CompositePass::execute(RenderContext::SharedPtr pRenderContext)
 
 	auto compositeShaderVars = mpCompositeShader->getVars();
 	
-	compositeShaderVars["gZBuffer"] = ZBuffer;
+	compositeShaderVars["gGBuffer"] = GBuffer;
 	compositeShaderVars["gFarField"] = farFieldBuffer;
 	compositeShaderVars["gNearField"] = nearFieldBuffer;
 	compositeShaderVars["gRTNearField"] = raytraceNearFieldBuffer;

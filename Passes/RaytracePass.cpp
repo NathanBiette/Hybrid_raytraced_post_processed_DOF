@@ -73,14 +73,13 @@ void RaytracePass::execute(RenderContext::SharedPtr pRenderContext)
 	// Check that we're ready to render
 	if (!mpRays || !mpRays->readyToRender()) return;
 
+	// didn't find a better way to clear to zero texture (useful only for visualization)
 	Fbo::SharedPtr outputFbo = mpResManager->createManagedFbo({ "Half_res_raytrace_near_field", "Half_res_raytrace_far_field" }, "Z-Buffer2");
 	if (!outputFbo) return;
 	pRenderContext->clearFbo(outputFbo.get(), vec4(0.0f, 0.0f, 0.0f, 1.0f), 1.0f, 0);
 
-	//Texture::SharedPtr farFieldBuffer = mpResManager->getTexture("Half_res_far_field");
 	Texture::SharedPtr nearFieldBuffer = mpResManager->getTexture("Half_res_raytrace_near_field");
 	Texture::SharedPtr raytraceFarFieldBuffer = mpResManager->getTexture("Half_res_raytrace_far_field");
-	Texture::SharedPtr halfResZBuffer = mpResManager->getTexture("Half_res_z_buffer");
 	Texture::SharedPtr raytraceMask = mpResManager->getTexture("RaytraceMask");
 
 	// Pass our background color down to our miss shader
@@ -90,7 +89,6 @@ void RaytracePass::execute(RenderContext::SharedPtr pRenderContext)
 	// Pass our camera parameters to the ray generation shader
 	auto rayGenVars = mpRays->getRayGenVars();
 	rayGenVars["gRaytraceMask"] = raytraceMask;
-	rayGenVars["gZBuffer"] = halfResZBuffer;
 	rayGenVars["gColorForeground"] = nearFieldBuffer;
 	rayGenVars["gColorBackground"] = raytraceFarFieldBuffer;
 	rayGenVars["RayGenCB"]["gLensRadius"] = mAperture / 2.0f;

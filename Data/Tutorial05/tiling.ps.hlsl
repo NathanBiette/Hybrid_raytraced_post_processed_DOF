@@ -1,7 +1,7 @@
 static const float EDGE_RANGE = 0.01f;
 static const float NORM_RANGE = 0.1f;
 
-Texture2D<float4>   gZBuffer;
+Texture2D<float4>   gGBuffer;
 
 cbuffer cameraParametersCB
 {
@@ -30,37 +30,37 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	float nearestForegroundZ = 0.0f;
 
 	bool foregroundSampled = false;
-	float closestZForeground = gZBuffer[uint2(pixelPos.x * 20, pixelPos.y * 20)].r;
-	float furthestZForeground = gZBuffer[uint2(pixelPos.x * 20, pixelPos.y * 20)].r;
+	float closestZForeground = gGBuffer[uint2(pixelPos.x * 20, pixelPos.y * 20)].r;
+	float furthestZForeground = gGBuffer[uint2(pixelPos.x * 20, pixelPos.y * 20)].r;
 
 	/*try something with normals*/
-	float3 minNorm = gZBuffer[uint2(pixelPos.x * 20, pixelPos.y * 20)].gba;
-	float3 maxNorm = gZBuffer[uint2(pixelPos.x * 20, pixelPos.y * 20)].gba;
+	float3 minNorm = gGBuffer[uint2(pixelPos.x * 20, pixelPos.y * 20)].gba;
+	float3 maxNorm = gGBuffer[uint2(pixelPos.x * 20, pixelPos.y * 20)].gba;
 
 	for (int x = pixelPos.x * 20; x < pixelPos.x * 20 + 20; x++) {
 		for (int y = pixelPos.y * 20; y < pixelPos.y * 20 + 20; y++) {
 
-			nearestBackgroundZ += (gZBuffer[uint2(x, y)].r > gDistanceToFocalPlane)
-				* ((nearestBackgroundZ > 0.0f && gZBuffer[uint2(x, y)].r < nearestBackgroundZ)
-				* (gZBuffer[uint2(x, y)].r - nearestBackgroundZ)
+			nearestBackgroundZ += (gGBuffer[uint2(x, y)].r > gDistanceToFocalPlane)
+				* ((nearestBackgroundZ > 0.0f && gGBuffer[uint2(x, y)].r < nearestBackgroundZ)
+				* (gGBuffer[uint2(x, y)].r - nearestBackgroundZ)
 				+ (nearestBackgroundZ == 0.0f)
-				* (gZBuffer[uint2(x, y)].r));
+				* (gGBuffer[uint2(x, y)].r));
 
-			nearestForegroundZ += (gZBuffer[uint2(x, y)].r <= gDistanceToFocalPlane)
-				* ((nearestForegroundZ > 0.0f && gZBuffer[uint2(x, y)].r < nearestForegroundZ)
-				* (gZBuffer[uint2(x, y)].r - nearestForegroundZ)
+			nearestForegroundZ += (gGBuffer[uint2(x, y)].r <= gDistanceToFocalPlane)
+				* ((nearestForegroundZ > 0.0f && gGBuffer[uint2(x, y)].r < nearestForegroundZ)
+				* (gGBuffer[uint2(x, y)].r - nearestForegroundZ)
 				+ (nearestForegroundZ == 0.0f)
-				* (gZBuffer[uint2(x, y)].r));
+				* (gGBuffer[uint2(x, y)].r));
 
-			maxBackgroundCOC = max(maxBackgroundCOC, COC(gZBuffer[uint2(x, y)].r) * (gZBuffer[uint2(x, y)].r > gDistanceToFocalPlane));
-			maxForegroundCOC = max(maxForegroundCOC, COC(gZBuffer[uint2(x, y)].r) * (gZBuffer[uint2(x, y)].r <= gDistanceToFocalPlane));
+			maxBackgroundCOC = max(maxBackgroundCOC, COC(gGBuffer[uint2(x, y)].r) * (gGBuffer[uint2(x, y)].r > gDistanceToFocalPlane));
+			maxForegroundCOC = max(maxForegroundCOC, COC(gGBuffer[uint2(x, y)].r) * (gGBuffer[uint2(x, y)].r <= gDistanceToFocalPlane));
 			
-			closestZForeground = min(closestZForeground, gZBuffer[uint2(x, y)].r);
-			furthestZForeground = max(furthestZForeground, gZBuffer[uint2(x, y)].r);
-			foregroundSampled = foregroundSampled | (gZBuffer[uint2(x, y)].r <= gDistanceToFocalPlane);
+			closestZForeground = min(closestZForeground, gGBuffer[uint2(x, y)].r);
+			furthestZForeground = max(furthestZForeground, gGBuffer[uint2(x, y)].r);
+			foregroundSampled = foregroundSampled | (gGBuffer[uint2(x, y)].r <= gDistanceToFocalPlane);
 
-			minNorm = float3(min(minNorm.r, gZBuffer[uint2(x, y)].g), min(minNorm.g, gZBuffer[uint2(x, y)].b), min(minNorm.b, gZBuffer[uint2(x, y)].a));
-			maxNorm = float3(max(maxNorm.r, gZBuffer[uint2(x, y)].g), max(maxNorm.g, gZBuffer[uint2(x, y)].b), max(maxNorm.b, gZBuffer[uint2(x, y)].a));
+			minNorm = float3(min(minNorm.r, gGBuffer[uint2(x, y)].g), min(minNorm.g, gGBuffer[uint2(x, y)].b), min(minNorm.b, gGBuffer[uint2(x, y)].a));
+			maxNorm = float3(max(maxNorm.r, gGBuffer[uint2(x, y)].g), max(maxNorm.g, gGBuffer[uint2(x, y)].b), max(maxNorm.b, gGBuffer[uint2(x, y)].a));
 
 		}
 	}
@@ -69,9 +69,8 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	TilePassOutput.Tiles = float4(maxBackgroundCOC, nearestBackgroundZ, maxForegroundCOC, nearestForegroundZ);
 	
 	// Decide to raytrace or not if foreground edge is deep enough
-	//bool tileToBeRaytraced = ((furthestZForeground - closestZForeground) > EDGE_RANGE) && foregroundSampled;
+	//TODO : implement proper gradient computation of normals to estimate 'variance' of normals, current implementation is too sensitive to outliers
 	bool tileToBeRaytraced = (length(maxNorm - minNorm) > NORM_RANGE) && foregroundSampled;
-	//TilePassOutput.EdgeMask = float4((float)(tileToBeRaytraced), min(closestZForeground + EDGE_RANGE, gDistanceToFocalPlane) * (float)tileToBeRaytraced, 0.0f, 1.0f);
 	TilePassOutput.EdgeMask = float4((float)(tileToBeRaytraced), length(maxNorm - minNorm) * (float)tileToBeRaytraced, 0.0f, 1.0f);
 	return TilePassOutput;
 }

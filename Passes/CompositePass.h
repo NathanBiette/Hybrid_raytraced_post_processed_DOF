@@ -35,8 +35,6 @@ protected:
 
 	// Shaders
 	FullscreenLaunch::SharedPtr   mpCompositeShader;
-	FullscreenLaunch::SharedPtr   mpSobelShader;
-	FullscreenLaunch::SharedPtr   mpEdgeDilateShader;
 	// State for our accumulation shader
 	GraphicsState::SharedPtr      mpGfxState;
 	Texture::SharedPtr            mpLastFrame;

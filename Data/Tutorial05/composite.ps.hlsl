@@ -2,7 +2,7 @@ static const float BLENDING_TWEAK = 3.0f;
 static const float NEAR_RT_BLEND_TWEAK = 0.2f;
 static const float FAR_RT_BLEND_TWEAK = 2.0f;
 
-Texture2D<float4>   gZBuffer;
+Texture2D<float4>   gGBuffer;
 Texture2D<float4>   gFarField;
 Texture2D<float4>   gNearField;
 Texture2D<float4>   gRTNearField;
@@ -104,7 +104,7 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 
 
 	float4 focusColor = gFullResColor.SampleLevel(gSampler, texC, 0);
-	float Z = gZBuffer.SampleLevel(gSampler, texC, 0).r;
+	float Z = gGBuffer.SampleLevel(gSampler, texC, 0).r;
 	
 	float farBlendFactor = saturate((Z - gFarFieldFocusLimit) / (BLENDING_TWEAK * gFarFocusZoneRange));
 

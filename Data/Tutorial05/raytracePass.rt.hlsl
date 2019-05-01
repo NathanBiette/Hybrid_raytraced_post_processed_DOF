@@ -76,6 +76,7 @@ static const float haltonX[64] = {
 	0.44531f,
 	0.94531f
 };
+
 static const float haltonY[64] = {
 	0.33333f, 
 	0.66667f, 
@@ -144,7 +145,6 @@ static const float haltonY[64] = {
 };
 
 Texture2D<float4> gRaytraceMask;
-Texture2D<float4> gZBuffer;
 // The output textures, where we store our G-buffer results.  See bindings in C++ code.
 RWTexture2D<float4> gColorForeground;
 RWTexture2D<float4> gColorBackground;
