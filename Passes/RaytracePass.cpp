@@ -34,7 +34,7 @@ namespace {
 	const float kMSAA[8][2] = { { 1,-3 },{ -1,3 },{ 5,1 },{ -3,-5 },{ -5,5 },{ -7,-1 },{ 3,7 },{ 7,-7 } };
 };
 
-bool RaytracePass::initialize(RenderContext::SharedPtr pRenderContext, ResourceManager::SharedPtr pResManager)
+bool DOFRayTracing::initialize(RenderContext::SharedPtr pRenderContext, ResourceManager::SharedPtr pResManager)
 {
 	int32_t width = 1920;
 	int32_t height = 1080;
@@ -61,14 +61,14 @@ bool RaytracePass::initialize(RenderContext::SharedPtr pRenderContext, ResourceM
 	return true;
 }
 
-void RaytracePass::initScene(RenderContext::SharedPtr pRenderContext, Scene::SharedPtr pScene)
+void DOFRayTracing::initScene(RenderContext::SharedPtr pRenderContext, Scene::SharedPtr pScene)
 {
 	// Stash a copy of the scene and pass it to our ray tracer (if initialized)
 	mpScene = std::dynamic_pointer_cast<RtScene>(pScene);
 	if (mpRays) mpRays->setScene(mpScene);
 }
 
-void RaytracePass::execute(RenderContext::SharedPtr pRenderContext)
+void DOFRayTracing::execute(RenderContext::SharedPtr pRenderContext)
 {
 	// Check that we're ready to render
 	if (!mpRays || !mpRays->readyToRender()) return;

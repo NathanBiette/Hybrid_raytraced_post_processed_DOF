@@ -177,8 +177,8 @@ cbuffer RayGenCB
 [shader("raygeneration")]
 void GBufferRayGen()
 {
+	// Test if pixel should be ray-traced
 	if (gRaytraceMask[uint2(DispatchRaysIndex().x / 10, DispatchRaysIndex().y / 10)].r > 0.0f ) {
-	//if (gRaytraceMask[uint2(DispatchRaysIndex().x, DispatchRaysIndex().y)].r > 0.0f ) {
 
 		float ZEdgeLimit = gRaytraceMask[uint2(DispatchRaysIndex().x / 10, DispatchRaysIndex().y / 10)].g;
 
@@ -206,7 +206,6 @@ void GBufferRayGen()
 		// Shoot many rays
 		for (int i = 0; i < gNumRays; i++) {
 			// Get random numbers (in polar coordinates), convert to random cartesian uv on the lens
-			float2 rnd = float2(2.0f * 3.14159265f * nextRand(randSeed), gLensRadius * nextRand(randSeed));
 			float2 uv = float2( 2.0f * haltonX[i] - 1.0f + (nextRand(randSeed) - 0.5f) * 0.25f, (-2.0f) * haltonY[i] + 1.0f + (nextRand(randSeed) - 0.5f) * 0.25f);
 			uv = uv * gLensRadius;
 

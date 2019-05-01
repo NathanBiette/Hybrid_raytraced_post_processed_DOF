@@ -19,24 +19,22 @@
 #include "../SharedUtils/RenderPass.h"
 #include "../SharedUtils/FullscreenLaunch.h"
 
-class TilePass : public RenderPass, inherit_shared_from_this<RenderPass, TilePass>
+class DOFPostProcess : public RenderPass, inherit_shared_from_this<RenderPass, DOFPostProcess>
 {
 public:
-	using SharedPtr = std::shared_ptr<TilePass>;
+	using SharedPtr = std::shared_ptr<DOFPostProcess>;
 
 	static SharedPtr create();
-	virtual ~TilePass() = default;
+	virtual ~DOFPostProcess() = default;
 
 protected:
-	TilePass();
+	DOFPostProcess();
 
 	//Thin lens parameters
 	float mFNumber = 2.0f;						// f number (typeless) = F/A (A = aperture)
 	float mFocalLength = 0.1f;					// here we take 50mm of focal length 
 	float mDistFocalPlane = 1.0f;				// What is our distance to focal plane (meaning where we focus on, 1m here)
 	float mAperture = mFocalLength / mFNumber;	//the diameter of the lens in thin lens model
-	//full frame camera = 36x24 mm 
-	//float mSensorWidth = 0.036f;
 	float mSensorWidth = 2.0f * mFocalLength * mDistFocalPlane / (mDistFocalPlane - mFocalLength);
 	float mImageWidth = 1920.0f;
 	//near and far limits of focus zone
@@ -44,7 +42,6 @@ protected:
 	float mFarLimitFocusZone = mAperture * mFocalLength * mDistFocalPlane / (mAperture * mFocalLength - (float)sqrt(2) * (mDistFocalPlane - mFocalLength) * mSensorWidth / mImageWidth);
 
 	float mDepthRange = 0.1f;
-	//float mDepthRange = 1.0f;
 
 	// Implementation of SimpleRenderPass interface
 	bool initialize(RenderContext::SharedPtr pRenderContext, ResourceManager::SharedPtr pResManager) override;

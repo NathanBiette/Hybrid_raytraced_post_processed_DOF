@@ -23,18 +23,18 @@ namespace {
 };
 
 // Define our constructor methods
-CompositePass::SharedPtr CompositePass::create()
+DOFCompositePass::SharedPtr DOFCompositePass::create()
 {
-	return SharedPtr(new CompositePass());
+	return SharedPtr(new DOFCompositePass());
 }
 
-CompositePass::CompositePass()
+DOFCompositePass::DOFCompositePass()
 	: RenderPass("Composite Pass", "Composite Options")
 {
 
 }
 
-bool CompositePass::initialize(RenderContext::SharedPtr pRenderContext, ResourceManager::SharedPtr pResManager)
+bool DOFCompositePass::initialize(RenderContext::SharedPtr pRenderContext, ResourceManager::SharedPtr pResManager)
 {
 	if (!pResManager) return false;
 
@@ -52,14 +52,14 @@ bool CompositePass::initialize(RenderContext::SharedPtr pRenderContext, Resource
 	return true;
 }
 
-void CompositePass::initScene(RenderContext::SharedPtr pRenderContext, Scene::SharedPtr pScene)
+void DOFCompositePass::initScene(RenderContext::SharedPtr pRenderContext, Scene::SharedPtr pScene)
 {
 	// Stash a copy of the scene
 	if (pScene)
 		mpScene = pScene;
 }
 
-void CompositePass::execute(RenderContext::SharedPtr pRenderContext)
+void DOFCompositePass::execute(RenderContext::SharedPtr pRenderContext)
 {
 	Texture::SharedPtr GBuffer = mpResManager->getTexture("GBuffer");
 	if (!GBuffer) return;

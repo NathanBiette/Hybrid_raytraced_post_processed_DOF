@@ -27,17 +27,17 @@
 #include "../SharedUtils/RayLaunch.h"
 #include <random>
 
-class RaytracePass : public RenderPass, inherit_shared_from_this<RenderPass, RaytracePass>
+class DOFRayTracing : public RenderPass, inherit_shared_from_this<RenderPass, DOFRayTracing>
 {
 public:
-	using SharedPtr = std::shared_ptr<RaytracePass>;
-	using SharedConstPtr = std::shared_ptr<const RaytracePass>;
+	using SharedPtr = std::shared_ptr<DOFRayTracing>;
+	using SharedConstPtr = std::shared_ptr<const DOFRayTracing>;
 
-	static SharedPtr create() { return SharedPtr(new RaytracePass()); }
-	virtual ~RaytracePass() = default;
+	static SharedPtr create() { return SharedPtr(new DOFRayTracing()); }
+	virtual ~DOFRayTracing() = default;
 
 protected:
-	RaytracePass() : RenderPass("Thin Lens Camera") {}
+	DOFRayTracing() : RenderPass("DOF Ray Tracing") {}
 
 	// Implementation of RenderPass interface
 	bool initialize(RenderContext::SharedPtr pRenderContext, ResourceManager::SharedPtr pResManager) override;

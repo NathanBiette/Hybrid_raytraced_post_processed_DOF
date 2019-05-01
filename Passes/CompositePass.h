@@ -2,16 +2,16 @@
 #include "../SharedUtils/RenderPass.h"
 #include "../SharedUtils/FullscreenLaunch.h"
 
-class CompositePass : public RenderPass, inherit_shared_from_this<RenderPass, CompositePass>
+class DOFCompositePass : public RenderPass, inherit_shared_from_this<RenderPass, DOFCompositePass>
 {
 public:
-	using SharedPtr = std::shared_ptr<CompositePass>;
+	using SharedPtr = std::shared_ptr<DOFCompositePass>;
 
 	static SharedPtr create();
-	virtual ~CompositePass() = default;
+	virtual ~DOFCompositePass() = default;
 
 protected:
-	CompositePass();
+	DOFCompositePass();
 
 	bool initialize(RenderContext::SharedPtr pRenderContext, ResourceManager::SharedPtr pResManager) override;
 	void execute(RenderContext::SharedPtr pRenderContext) override;
@@ -22,12 +22,11 @@ protected:
 	bool appliesPostprocess() override { return true; }
 	bool requiresScene() override { return false; }
 
-	float mFNumber = 2.0f;                  // f number (typeless) = F/A (A = aperture)
-	float mFocalLength = 0.05f;              // here we take 50mm of focal length 
+	float mFNumber = 2.0f;						// f number (typeless) = F/A (A = aperture)
+	float mFocalLength = 0.1f;					// here we take 50mm of focal length 
 	float mDistFocalPlane = 1.0f;				// What is our distance to focal plane (meaning where we focus on, 1m here)
-	float mAperture = mFocalLength / mFNumber;
-	//full frame camera = 36x24 mm 
-	float mSensorWidth = 0.036f;
+	float mAperture = mFocalLength / mFNumber;	//the diameter of the lens in thin lens model
+	float mSensorWidth = 2.0f * mFocalLength * mDistFocalPlane / (mDistFocalPlane - mFocalLength);
 	float mImageWidth = 1920.0f;
 	//near and far limits of focus zone
 	float mNearLimitFocusZone = mAperture * mFocalLength * mDistFocalPlane / (mAperture * mFocalLength + (float)sqrt(2) * (mDistFocalPlane - mFocalLength) * mSensorWidth / mImageWidth);

@@ -27,18 +27,18 @@ namespace {
 };
 
 // Define our constructor methods
-TilePass::SharedPtr TilePass::create()
+DOFPostProcess::SharedPtr DOFPostProcess::create()
 {
-	return SharedPtr(new TilePass());
+	return SharedPtr(new DOFPostProcess());
 }
 
-TilePass::TilePass()
-	: RenderPass("Tiling Pass", "Tiling Options")
+DOFPostProcess::DOFPostProcess()
+	: RenderPass("DOF Post Process", "DOF Post Process Options")
 {
 
 }
 
-bool TilePass::initialize(RenderContext::SharedPtr pRenderContext, ResourceManager::SharedPtr pResManager)
+bool DOFPostProcess::initialize(RenderContext::SharedPtr pRenderContext, ResourceManager::SharedPtr pResManager)
 {
 	if (!pResManager) return false;
 
@@ -81,7 +81,7 @@ bool TilePass::initialize(RenderContext::SharedPtr pRenderContext, ResourceManag
 	return true;
 }
 
-void TilePass::initScene(RenderContext::SharedPtr pRenderContext, Scene::SharedPtr pScene)
+void DOFPostProcess::initScene(RenderContext::SharedPtr pRenderContext, Scene::SharedPtr pScene)
 {
 	// Stash a copy of the scene
 	if (pScene)
@@ -90,7 +90,7 @@ void TilePass::initScene(RenderContext::SharedPtr pRenderContext, Scene::SharedP
 }
 
 /*
-void TilePass::resize(uint32_t width, uint32_t height)
+void DOFPostProcess::resize(uint32_t width, uint32_t height)
 {
 	// Create / resize a texture to store the previous frame.
 	//    Parameters: width, height, texture format, texture array size, #mip levels, initialization data, how we expect to use it.
@@ -104,7 +104,7 @@ void TilePass::resize(uint32_t width, uint32_t height)
 }
 */
 
-void TilePass::execute(RenderContext::SharedPtr pRenderContext)
+void DOFPostProcess::execute(RenderContext::SharedPtr pRenderContext)
 {
 	Falcor::logWarning(std::string(" CAMERA SETTINGS ARE ") + std::to_string(mpScene->getActiveCamera()->getFarPlane()));
 	Falcor::logWarning(std::string("INITIALIZATION - VIEWPORT WIDTH = ") + std::to_string(mpResManager->getWidth()));
