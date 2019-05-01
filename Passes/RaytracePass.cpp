@@ -92,14 +92,9 @@ void RaytracePass::execute(RenderContext::SharedPtr pRenderContext)
 	rayGenVars["gColorForeground"] = nearFieldBuffer;
 	rayGenVars["gColorBackground"] = raytraceFarFieldBuffer;
 	rayGenVars["RayGenCB"]["gLensRadius"] = mAperture / 2.0f;
-	rayGenVars["RayGenCB"]["gFocalLen"] = mFocalLength;
 	rayGenVars["RayGenCB"]["gPlaneDist"] = mDistFocalPlane;
-	rayGenVars["RayGenCB"]["gSensorWidth"] = mSensorWidth;
-	rayGenVars["RayGenCB"]["gSensorHeight"] = mSensorWidth * 9.0f / 16.0f;
-	rayGenVars["RayGenCB"]["gSensorDepth"] = mDistFocalPlane * mFocalLength / (mDistFocalPlane - mFocalLength);
 	rayGenVars["RayGenCB"]["gFrameCount"] = mFrameCount++;
 	rayGenVars["RayGenCB"]["gNumRays"] = mNumRays;
-	rayGenVars["RayGenCB"]["gViewMatrix"] = mpScene->getActiveCamera()->getViewMatrix();
 
 	// Compute our jitter, either (0,0) as the center or some computed random/MSAA offset
 	float xOff = 0.0f, yOff = 0.0f;

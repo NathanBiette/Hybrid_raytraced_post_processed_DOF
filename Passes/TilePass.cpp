@@ -51,20 +51,24 @@ bool TilePass::initialize(RenderContext::SharedPtr pRenderContext, ResourceManag
 	Falcor::logWarning(std::string("INITIALIZATION - VIEWPORT WIDTH = ") + std::to_string(mpResManager->getWidth()));
 	Falcor::logWarning(std::string("INITIALIZATION - VIEWPORT HEIGHT = ") + std::to_string(mpResManager->getHeight()));
 
+	// Textures at 20th of resolution for tile informations
 	mpResManager->requestTextureResource("Tiles", ResourceFormat::RGBA16Float,(Falcor::Resource::BindFlags)112U, width / 20 , height / 20); //specifying size seems to work well
 	mpResManager->requestTextureResource("Dilate", ResourceFormat::RGBA16Float,(Falcor::Resource::BindFlags)112U, width / 20 , height / 20); 
 	mpResManager->requestTextureResource("EdgeMask", ResourceFormat::RG16Float,(Falcor::Resource::BindFlags)112U, width / 20 , height / 20);  
 	mpResManager->requestTextureResource("RaytraceMask", ResourceFormat::RG16Float,(Falcor::Resource::BindFlags)112U, width / 20 , height / 20);  
 
+	// Textures for Downsample-Presort pass (half res)
 	mpResManager->requestTextureResource("Half_res_color", ResourceFormat::RGBA16Float,(Falcor::Resource::BindFlags)112U, width / 2 , height / 2);
 	mpResManager->requestTextureResource("Presort_buffer", ResourceFormat::RGBA16Float,(Falcor::Resource::BindFlags)112U, width / 2 , height / 2);
 	mpResManager->requestTextureResource("Half_res_z_buffer", ResourceFormat::R32Float, (Falcor::Resource::BindFlags)112U, width / 2, height / 2);
 
+	// Intermediary half-resolution color textures for PP and RT
 	mpResManager->requestTextureResource("Half_res_far_field", ResourceFormat::RGBA16Float, (Falcor::Resource::BindFlags)112U, width / 2, height / 2);
 	mpResManager->requestTextureResource("Half_res_near_field", ResourceFormat::RGBA16Float, (Falcor::Resource::BindFlags)112U, width / 2, height / 2);
 	mpResManager->requestTextureResource("Half_res_raytrace_near_field", ResourceFormat::RGBA16Float, (Falcor::Resource::BindFlags)112U, width / 2, height / 2);
 	mpResManager->requestTextureResource("Half_res_raytrace_far_field", ResourceFormat::RGBA16Float, (Falcor::Resource::BindFlags)112U, width / 2, height / 2);
 
+	// Useless texture used for FBO setup (ZBuffer needed for some reason)
 	mpResManager->requestTextureResource("Z-Buffer2", ResourceFormat::D24UnormS8, ResourceManager::kDepthBufferFlags);
 
 	// Create our graphics state and an tiling shader

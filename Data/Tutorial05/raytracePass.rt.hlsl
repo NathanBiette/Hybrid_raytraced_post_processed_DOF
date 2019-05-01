@@ -166,15 +166,10 @@ struct ColorRayPayload
 cbuffer RayGenCB
 {
 	float   gLensRadius;    // Radius of the thin lens.  Use 0 for pinhole camera.
-	float   gFocalLen;      // Focal Length of the lens
 	float   gPlaneDist;      // Distance to the plane where geometry is in focus
-	float   gSensorWidth;      // Distance to the plane where geometry is in focus
-	float   gSensorHeight;      // Distance to the plane where geometry is in focus
-	float   gSensorDepth;      // Distance to the plane where geometry is in focus
 	uint    gFrameCount;    // An integer changing every frame to update the random number
 	float2  gPixelJitter;   // in [0..1]^2.  Should be (0.5,0.5) if no jittering used
 	uint	gNumRays;
-	float4x4 gViewMatrix;
 
 }
 
