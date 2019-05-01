@@ -16,7 +16,7 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************************************/
 
-#include "TilePass.h"
+#include "DOFPostProcess.h"
 
 namespace {
 	// Where is our shader located?

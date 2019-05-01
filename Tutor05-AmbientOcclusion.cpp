@@ -21,9 +21,9 @@
 #include "../CommonPasses/SimpleGBufferPass.h"
 #include "Passes/AmbientOcclusionPass.h"
 #include "../CommonPasses/CopyToOutputPass.h"
-#include "Passes/TilePass.h"
-#include "Passes/CompositePass.h"
-#include "Passes/RaytracePass.h"
+#include "Passes/DOFPostProcess.h"
+#include "Passes/DOFCompositePass.h"
+#include "Passes/DOFRayTracing.h"
 
 
 int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR lpCmdLine, _In_ int nShowCmd)
@@ -37,7 +37,6 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 	pipeline->setPass(2, DOFRayTracing::create());
 	pipeline->setPass(3, DOFCompositePass::create());
 	pipeline->setPass(4, CopyToOutputPass::create());
-	//pipeline->setPass(1, AmbientOcclusionPass::create());  // Create a pass to shoot ambient occlusion rays
  
 	// Define a set of config / window parameters for our program
     SampleConfig config;

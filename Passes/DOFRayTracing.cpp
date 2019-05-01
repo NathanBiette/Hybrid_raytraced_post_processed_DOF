@@ -16,7 +16,7 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************************************/
 //#include "HostDeviceSharedCode.h"
-#include "RaytracePass.h"
+#include "DOFRayTracing.h"
 #include <chrono>
 
 // Some global vars, used to simplify changing shader locations
