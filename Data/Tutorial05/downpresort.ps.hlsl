@@ -18,9 +18,6 @@ cbuffer cameraParametersCB
 	float gSinglePixelRadius;
 	float gTextureWidth;
 	float gTextureHeight;
-	float gNear;
-	float gFar;
-	float gStrengthTweak;
 }
 
 struct PS_OUTPUT
@@ -36,8 +33,8 @@ struct PS_OUTPUT
 /*
 COC size reminder
 
-float mFNumber = 2.0f;                  // f number (typeless) = F/A (A = aperture)
-float mFocalLength = 0.05f;              // here we take 50mm of focal length
+float mFNumber = 2.0f;						// f number (typeless) = F/A (A = aperture)
+float mFocalLength = 0.05f;					// here we take 50mm of focal length
 float mDistFocalPlane = 1.0f;				// What is our distance to focal plane (meaning where we focus on, 1m here)
 float mAperture = mFocalLength / mFNumber = 0.025;
 
@@ -129,7 +126,7 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 		To get location of the sample : take the center of current pixel, 
 		get the rigth angle according to index of sample on unit circle and get the rigth distance to center pixel
 		The distance to pixel is the COC (diameter) size / 12 (coc /(2*6) 2 is to get the radius, 
-			6 is to fill in the space between main filter samples (3 circles of sample, 49taps)) 
+		6 is to fill in the space between main filter samples (3 circles of sample, 49taps)) 
 		*/
 		sampleLocation.x = ((float)pixelPos.x * 2.0f + coc / 12.0f * cos(2.0f * PI* (float)i / 8.0f)) / gTextureWidth;
 		sampleLocation.y = ((float)pixelPos.y * 2.0f + coc / 12.0f * sin(2.0f * PI* (float)i / 8.0f)) / gTextureHeight;

@@ -140,8 +140,8 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	else {
 		if (raytraced) {
 			// Transition smoothly from PP foreground to RT foreground on edges based on rays repartition between front and back layer in foreground
-			//float inForegroundBlendFactor = saturate(gRTFarField.SampleLevel(gSampler, texC, 0).a * NEAR_RT_BLEND_TWEAK);
-			//float3 foregroundColor = inForegroundBlendFactor * foregroundPPColor.rgb + (1.0f - inForegroundBlendFactor) * foregroundRTColor.rgb;
+			
+			// TO BE DONE
 			
 			float3 foregroundColor = foregroundRTColor.rgb;
 

@@ -2,6 +2,7 @@ static const float PI = 3.14159265f;
 static const float JITTER_TWEAK = 2.0f;
 static const float EDGE_RANGE = 0.10f;
 
+// kernel samples X and Y coordinates (49 taps on 3 ring, see kernel weight explanation below)
 static const float kernelX[48] = {
 	0.5f,
 	0.482962913f,
@@ -116,13 +117,10 @@ struct PS_OUTPUT
 {
 	float4 halfResFarField		: SV_Target0;
 	float4 halfResNearField		: SV_Target1;
-	float4 rayTraceMask			: SV_Target2;
 };
 
 cbuffer cameraParametersCB
 {
-	float gOffset;
-	float gNearLimitFocusZone;
 	float gDistanceToFocalPlane;
 	float gTextureWidth;
 	float gTextureHeight;
@@ -201,13 +199,7 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	farForegroundColor = gPresortBuffer[pixelPos].g * float4(gHalfResFrameColor[pixelPos].rgb, 1.0);
 	foregroundAlphaSpreadCmpSum = SampleAlpha(gPresortBuffer[pixelPos].r / 2.0f, gSinglePixelRadius);
 
-	// For ray trace mask 
-	bool foregroundSampled = gHalfResZBuffer[pixelPos].r <= gDistanceToFocalPlane;
-	float closestZForeground = gHalfResZBuffer[pixelPos].r;
-	float furthestZForeground = gHalfResZBuffer[pixelPos].r;
-
 	// Iterate over the samples
-
 	for (int i = 0; i < 48; i++) {
 			
 		/*Here let’s suppose that the circular filter has the same size as the max_coc in tile */
@@ -279,12 +271,6 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 			* SampleAlpha(foregroundPresortSample.r / 2.0f, gSinglePixelRadius)
 			* (gHalfResZBuffer.SampleLevel(gSampler, foregroundSampleCoord, 0).r <= gDistanceToFocalPlane);
 
-
-		// Create the ray trace mask by checking the Z range sampled with the main pass kernel on foreground geometry
-		closestZForeground = min(closestZForeground, gHalfResZBuffer.SampleLevel(gSampler, foregroundKernelCoord, 0).r);
-		furthestZForeground = max(furthestZForeground, gHalfResZBuffer.SampleLevel(gSampler, foregroundKernelCoord, 0).r);
-		foregroundSampled = foregroundSampled | (gHalfResZBuffer.SampleLevel(gSampler, foregroundKernelCoord, 0).r <= gDistanceToFocalPlane);
-
 	}
 
 	MainPassBufOut.halfResFarField = (gHalfResZBuffer[pixelPos].r > gDistanceToFocalPlane) ? 
@@ -293,7 +279,6 @@ PS_OUTPUT main(float2 texC : TEXCOORD, float4 pos : SV_Position)
 	MainPassBufOut.halfResNearField = (gHalfResZBuffer[pixelPos].r <= gDistanceToFocalPlane + 0.01f) ?
 		float4((farForegroundColor.rgb + nearForegroundColor.rgb) / foregroundAlphaSpreadCmpSum, 1.0) :
 		float4(0.0f, 0.0f, 0.0f, 1.0f);
-	MainPassBufOut.rayTraceMask = float4((float)((furthestZForeground - closestZForeground) > EDGE_RANGE && foregroundSampled), 0.0f, 0.0f, 1.0f);
 
 	return MainPassBufOut;
 }

@@ -47,8 +47,6 @@ bool CompositePass::initialize(RenderContext::SharedPtr pRenderContext, Resource
 	int32_t height = 1080;
 
 	mpResManager->requestTextureResource("Final_image");
-	mpResManager->requestTextureResource("Edge_buffer", ResourceFormat::R16Float, (Falcor::Resource::BindFlags)112U, width / 10, height / 10);
-	mpResManager->requestTextureResource("Edge_dilate_buffer", ResourceFormat::R16Float, (Falcor::Resource::BindFlags)112U, width / 10, height / 10);
 
 	// Create our graphics state and an tiling shader
 	mpGfxState = GraphicsState::create();
@@ -121,50 +119,5 @@ void CompositePass::execute(RenderContext::SharedPtr pRenderContext)
 	samplerBindLocation = pReflectorCompositePass->getDefaultParameterBlock()->getResourceBinding("gSampler");
 	ParameterBlock* pDefaultBlock = compositeShaderVars->getVars()->getDefaultBlock().get();
 	pDefaultBlock->setSampler(samplerBindLocation, 0, mpSampler);
-
-	/*################################# sobel filtering pass #############################################*/
-	Texture::SharedPtr halfResZBuffer = mpResManager->getTexture("Half_res_z_buffer");
-	if (!ZBuffer) return;
-	Fbo::SharedPtr outputSobelFbo = mpResManager->createManagedFbo({ "Edge_buffer" }, "Z-Buffer2");
-	if (!outputSobelFbo) return;
-	pRenderContext->clearFbo(outputSobelFbo.get(), vec4(0.0f, 0.0f, 0.0f, 1.0f), 1.0f, 0);
-	
-	auto sobelShaderVars = mpSobelShader->getVars();
-	
-	sobelShaderVars["gHalfResZBuffer"] = halfResZBuffer;
-	sobelShaderVars["cameraParametersCB"]["gDistanceToFocalPlane"] = mDistFocalPlane;
-
-	mpGfxState->setFbo(outputSobelFbo);
-	mpSobelShader->execute(pRenderContext, mpGfxState);
-
-	/*################################# dilate pass #############################################*/
-
-	Texture::SharedPtr edgeBuffer = mpResManager->getTexture("Edge_buffer");
-	if (!edgeBuffer) return;
-	Fbo::SharedPtr outputDilateFbo = mpResManager->createManagedFbo({ "Edge_dilate_buffer" }, "Z-Buffer2");
-	if (!outputDilateFbo) return;
-	pRenderContext->clearFbo(outputDilateFbo.get(), vec4(0.0f, 0.0f, 0.0f, 1.0f), 1.0f, 0);
-
-	auto edgeDilateShaderVars = mpEdgeDilateShader->getVars();
-	edgeDilateShaderVars["gEdgeBuffer"] = edgeBuffer;
-	edgeDilateShaderVars["cameraParametersCB"]["gTextureWidth"] = (float)mpResManager->getWidth();
-	edgeDilateShaderVars["cameraParametersCB"]["gTextureHeight"] = (float)mpResManager->getHeight();
-
-	Sampler::SharedPtr mpLinearSampler;
-	Sampler::Desc linearsamplerDesc;
-	ProgramReflection::SharedConstPtr pReflectorEdgeDilatePass;
-	ParameterBlockReflection::BindLocation linearSamplerBindLocation;
-
-	linearsamplerDesc.setFilterMode(Sampler::Filter::Linear, Sampler::Filter::Linear, Sampler::Filter::Point).setAddressingMode(Sampler::AddressMode::Border, Sampler::AddressMode::Border, Sampler::AddressMode::Border);
-	mpLinearSampler = Sampler::create(linearsamplerDesc);
-
-	pReflectorEdgeDilatePass = mpEdgeDilateShader->getProgramReflection();
-	linearSamplerBindLocation = pReflectorEdgeDilatePass->getDefaultParameterBlock()->getResourceBinding("gSampler");
-	ParameterBlock* pDefaultLinearBlock = edgeDilateShaderVars->getVars()->getDefaultBlock().get();
-	pDefaultLinearBlock->setSampler(linearSamplerBindLocation, 0, mpLinearSampler);
-
-
-	mpGfxState->setFbo(outputDilateFbo);
-	mpEdgeDilateShader->execute(pRenderContext, mpGfxState);
 
 }

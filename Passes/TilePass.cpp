@@ -59,7 +59,6 @@ bool TilePass::initialize(RenderContext::SharedPtr pRenderContext, ResourceManag
 	mpResManager->requestTextureResource("Half_res_color", ResourceFormat::RGBA16Float,(Falcor::Resource::BindFlags)112U, width / 2 , height / 2);
 	mpResManager->requestTextureResource("Presort_buffer", ResourceFormat::RGBA16Float,(Falcor::Resource::BindFlags)112U, width / 2 , height / 2);
 	mpResManager->requestTextureResource("Half_res_z_buffer", ResourceFormat::R32Float, (Falcor::Resource::BindFlags)112U, width / 2, height / 2);
-	mpResManager->requestTextureResource("RaytraceMask2", ResourceFormat::RG16Float, (Falcor::Resource::BindFlags)112U, width / 2, height / 2);
 
 	mpResManager->requestTextureResource("Half_res_far_field", ResourceFormat::RGBA16Float, (Falcor::Resource::BindFlags)112U, width / 2, height / 2);
 	mpResManager->requestTextureResource("Half_res_near_field", ResourceFormat::RGBA16Float, (Falcor::Resource::BindFlags)112U, width / 2, height / 2);
@@ -147,8 +146,6 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	mpDilateShader->execute(pRenderContext, mpGfxState);
 
 	//########################  Third pass -> downPresort pass  ########################################
-	
-	
 	Fbo::SharedPtr outputFbo3 = mpResManager->createManagedFbo({ "Half_res_color", "Presort_buffer", "Half_res_z_buffer" }, "Z-Buffer2");
 	if (!outputFbo) return;
 	pRenderContext->clearFbo(outputFbo3.get(), vec4(0.0f, 0.0f, 0.0f, 1.0f), 1.0f, 0);
@@ -165,26 +162,17 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	downPresortShaderVars["cameraParametersCB"]["gAperture"] = mAperture;
 	downPresortShaderVars["cameraParametersCB"]["gSensorWidth"] = mSensorWidth;
 	downPresortShaderVars["cameraParametersCB"]["gDepthRange"] = mDepthRange;			//const of depth range here
-	
 	downPresortShaderVars["cameraParametersCB"]["gSinglePixelRadius"] = 0.7071f;	//const of pixel radius
-	
 	downPresortShaderVars["cameraParametersCB"]["gTextureWidth"] = (float)mpResManager->getWidth();
 	downPresortShaderVars["cameraParametersCB"]["gTextureHeight"] = (float)mpResManager->getHeight();
-	downPresortShaderVars["cameraParametersCB"]["gNear"] = mpScene->getActiveCamera()->getNearPlane();
-	downPresortShaderVars["cameraParametersCB"]["gFar"] = mpScene->getActiveCamera()->getFarPlane();
-	downPresortShaderVars["cameraParametersCB"]["gStrengthTweak"] = 0.5f;
-
-
 	
 	//Setup a clean sampler through the API
 	Sampler::SharedPtr mpSampler;
 	Sampler::Desc samplerDesc;
 	ProgramReflection::SharedConstPtr pReflectorDownPresortPass;
 	ParameterBlockReflection::BindLocation samplerBindLocation;
-
 	samplerDesc.setFilterMode(Sampler::Filter::Linear, Sampler::Filter::Linear, Sampler::Filter::Point).setAddressingMode(Sampler::AddressMode::Border, Sampler::AddressMode::Border, Sampler::AddressMode::Border);
 	mpSampler = Sampler::create(samplerDesc);
-	
 	pReflectorDownPresortPass = mpDownPresortShader->getProgramReflection();
 	samplerBindLocation = pReflectorDownPresortPass->getDefaultParameterBlock()->getResourceBinding("gSampler");
 	ParameterBlock* pDefaultBlock = downPresortShaderVars->getVars()->getDefaultBlock().get();
@@ -195,7 +183,7 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	mpDownPresortShader->execute(pRenderContext, mpGfxState);
 
 	//########################  Fourth pass -> main pass  ########################################
-	Fbo::SharedPtr outputFbo4 = mpResManager->createManagedFbo({ "Half_res_far_field", "Half_res_near_field", "RaytraceMask2" }, "Z-Buffer2");
+	Fbo::SharedPtr outputFbo4 = mpResManager->createManagedFbo({ "Half_res_far_field", "Half_res_near_field" }, "Z-Buffer2");
 	if (!outputFbo) return;
 	pRenderContext->clearFbo(outputFbo4.get(), vec4(0.0f, 0.0f, 0.0f, 0.0f), 1.0f, 0);
 
@@ -205,8 +193,6 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	Texture::SharedPtr HalfResZBuffer = mpResManager->getTexture("Half_res_z_buffer");
 	Texture::SharedPtr rayTraceMask = mpResManager->getTexture("RaytraceMask");
 
-	
-
 	//shader vars setup
 	auto mainPassShaderVars = mpMainPassShader->getVars();
 	mainPassShaderVars["gDilate"] = dilate;
@@ -215,8 +201,6 @@ void TilePass::execute(RenderContext::SharedPtr pRenderContext)
 	mainPassShaderVars["gPresortBuffer"] = presortBuffer;
 	mainPassShaderVars["gRayTraceMask"] = rayTraceMask;
 	mainPassShaderVars["cameraParametersCB"]["gDistanceToFocalPlane"] = mDistFocalPlane;
-	mainPassShaderVars["cameraParametersCB"]["gOffset"] = mDistFocalPlane - mNearLimitFocusZone;
-	mainPassShaderVars["cameraParametersCB"]["gNearLimitFocusZone"] = mNearLimitFocusZone;
 	mainPassShaderVars["cameraParametersCB"]["gTextureWidth"] = (float)mpResManager->getWidth();
 	mainPassShaderVars["cameraParametersCB"]["gTextureHeight"] = (float)mpResManager->getHeight();
 	mainPassShaderVars["cameraParametersCB"]["gSinglePixelRadius"] = 0.7071f;	//const of pixel radius
